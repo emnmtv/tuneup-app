@@ -1,0 +1,41 @@
+.login-container {
+    max-width: 300px;
+    margin: auto;
+    display: flex;
+    flex-direction: column;
+  }
+  
+  input {
+    margin: 5px 0;
+    padding: 8px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+  }
+  
+  button {
+    background-color: blue;
+    color: white;
+    padding: 8px;
+    cursor: pointer;
+    border: none;
+    border-radius: 4px;
+  }
+  
+  button:hover {
+    background-color: darkblue;
+  }
+
+  .register-btn {
+    background: #2ecc71;
+    color: white;
+    margin-top: 10px;
+    border: none;
+    padding: 10px;
+    cursor: pointer;
+    width: 100%;
+  }
+  
+  .register-btn:hover {
+    background: #27ae60;
+  }
+  
