@@ -166,3 +166,62 @@ export const editCreatorProfile = async (data) => {
   const result = await response.json();
   return result;
 };
+
+
+export const createPost = async (data) => {
+  const token = localStorage.getItem('token');
+
+  if (!token) {
+    throw new Error('Token not found. Please log in.');
+  }
+
+  const formData = new FormData();
+  formData.append('title', data.title);
+  formData.append('description', data.description);
+
+  if (data.image) {
+    formData.append('image', data.image); // File object
+  }
+  if (data.video) {
+    formData.append('video', data.video); // File object
+  }
+
+  try {
+    const response = await fetch(`${BASE_URL}/createpost`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${token}`, // No need for 'Content-Type', FormData handles it
+      },
+      body: formData,
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error('Server Error:', errorText);
+      throw new Error('Failed to create post');
+    }
+
+    return await response.json();
+  } catch (error) {
+    console.error('Error in createPost:', error);
+    throw new Error(error.message || 'Unknown error occurred');
+  }
+};
+
+
+
+// authService.js
+export const fetchUserProfileAndPosts = async (userId) => {
+  try {
+    const response = await fetch(`${BASE_URL}/viewuserpost?userId=${userId}`);
+    if (!response.ok) {
+      throw new Error(`Error: ${response.statusText}`);
+    }
+    const data = await response.json();
+    return data;
+  } catch (error) {
+    console.error('Fetch error:', error);
+    return null;
+  }
+};
+

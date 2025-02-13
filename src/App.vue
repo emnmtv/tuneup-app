@@ -1,12 +1,45 @@
-<script setup>
-import { useRoute } from "vue-router";
-import NavBar from "./components/NavBar.vue";
+<template>
+  <div class="app-container">
+    <!-- Show sidebar only if not on login or register page -->
+    <Sidenav v-if="showSidebar" />
+    <div class="content">
+      <router-view />
+    </div>
+  </div>
+</template>
 
-const route = useRoute();
+<script>
+import Sidenav from "./components/Sidenav.vue";
+import { useRoute } from "vue-router";
+import { computed } from "vue";
+
+export default {
+  components: {
+    Sidenav,
+  },
+  setup() {
+    const route = useRoute();
+
+    // Define routes where sidebar should NOT be shown
+    const authRoutes = ["/", "/register"];
+
+    // Show sidebar if NOT on auth routes (login & register)
+    const showSidebar = computed(() => !authRoutes.includes(route.path));
+
+    return {
+      showSidebar,
+    };
+  },
+};
 </script>
 
-<template>
- <NavBar v-if="!['/', '/register'].includes(route.path)" />
+<style>
+.app-container {
+  display: flex;
+}
 
-  <router-view></router-view>
-</template>
+.content {
+  flex-grow: 1;
+  padding: 20px;
+}
+</style>
