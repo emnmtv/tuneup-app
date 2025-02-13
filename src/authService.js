@@ -12,7 +12,14 @@ export const loginUser = async (email, password) => {
       throw new Error("Login failed");
     }
 
-    return await response.json();
+    const result = await response.json();
+
+    // Store the token and role in localStorage
+    const { token, role } = result; // Assuming the response has 'token' and 'role'
+    localStorage.setItem("jwtToken", token); // Store the token
+    localStorage.setItem("userRole", role); // Store the role
+
+    return result;
   } catch (error) {
     console.error("Login error:", error);
     throw error;
@@ -83,3 +90,79 @@ export async function verifyEmail(email, code) {
     throw error;
   }
 }
+
+export const upgradeToCreator = async (data) => {
+  const token = localStorage.getItem('token'); // Assuming the token is stored in localStorage
+
+  if (!token) {
+    throw new Error('Token not found. Please log in.');
+  }
+
+  const response = await fetch(`${BASE_URL}/upgrade`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${token}`, // Add the token to the Authorization header
+    },
+    body: JSON.stringify(data),
+  });
+
+  if (!response.ok) {
+    const errorResponse = await response.json();
+    throw new Error(errorResponse.error || 'Failed to upgrade to creator');
+  }
+
+  const result = await response.json();
+  return result;
+};
+
+
+// New getProfile function to fetch user profile
+export const getCreatorProfile = async () => {
+  const token = localStorage.getItem('token'); // Fetch the token from localStorage
+
+  if (!token) {
+    throw new Error('Token not found. Please log in.');
+  }
+
+  const response = await fetch(`${BASE_URL}/cprofile`, {
+    method: 'GET',
+    headers: {
+      'Authorization': `Bearer ${token}`, // Add the token to the Authorization header
+    },
+  });
+
+  if (!response.ok) {
+    const errorResponse = await response.json();
+    throw new Error(errorResponse.error || 'Failed to fetch profile');
+  }
+
+  const result = await response.json();
+  return result;
+};
+
+// New function to edit the Creator Profile
+export const editCreatorProfile = async (data) => {
+  const token = localStorage.getItem('token'); // Assuming the token is stored in localStorage
+
+  if (!token) {
+    throw new Error('Token not found. Please log in.');
+  }
+
+  const response = await fetch(`${BASE_URL}/editcprofile`, {
+    method: 'PUT',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${token}`, // Add the token to the Authorization header
+    },
+    body: JSON.stringify(data),
+  });
+
+  if (!response.ok) {
+    const errorResponse = await response.json();
+    throw new Error(errorResponse.error || 'Failed to update profile');
+  }
+
+  const result = await response.json();
+  return result;
+};

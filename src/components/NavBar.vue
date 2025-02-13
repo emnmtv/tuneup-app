@@ -1,5 +1,5 @@
 <script setup>
-import { ref } from "vue";
+import { ref, onMounted } from "vue";
 import { useRouter } from "vue-router";
 
 // Search functionality
@@ -18,8 +18,17 @@ const toggleSidebar = () => {
 const router = useRouter();
 const logout = () => {
   localStorage.removeItem("token"); // Remove token on logout
+  localStorage.removeItem("userRole"); // Remove role on logout
   router.push("/"); // Redirect to login
 };
+
+// Fetch the role from localStorage
+const userRole = ref(localStorage.getItem("userRole") || "user");
+
+onMounted(() => {
+  // Update the role if available
+  userRole.value = localStorage.getItem("userRole") || "user";
+});
 </script>
 
 <template>
@@ -37,13 +46,31 @@ const logout = () => {
             <span v-if="!isCollapsed">Dashboard</span>
           </router-link>
         </li>
-        <li>
+        <li v-if="userRole === 'user' || userRole === 'creator'">
           <router-link to="/profile">
             <span class="icon">👤</span>
             <span v-if="!isCollapsed">Profile</span>
           </router-link>
         </li>
-        <li>
+        <li v-if="userRole === 'user'">
+          <router-link to="/upgrade">
+            <span class="icon">💼</span>
+            <span v-if="!isCollapsed">Creator Dashboard</span>
+          </router-link>
+        </li>
+        <li v-if="userRole === 'creator'">
+          <router-link to="/creatorprofile">
+            <span class="icon">💼</span>
+            <span v-if="!isCollapsed">Creator Profile</span>
+          </router-link>
+        </li>
+        <li v-if="userRole === 'admin'">
+          <router-link to="/admin-dashboard">
+            <span class="icon">⚙️</span>
+            <span v-if="!isCollapsed">Admin Dashboard</span>
+          </router-link>
+        </li>
+        <li v-if="userRole === 'creator' || userRole === 'admin'">
           <router-link to="/settings">
             <span class="icon">⚙️</span>
             <span v-if="!isCollapsed">Settings</span>
@@ -70,6 +97,9 @@ const logout = () => {
     </div>
   </div>
 </template>
+
+
+
 
 <style scoped>
 /* Layout */
