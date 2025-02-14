@@ -210,13 +210,25 @@ export const createPost = async (data) => {
 
 
 
-// authService.js
-export const fetchUserProfileAndPosts = async (userId) => {
+export const fetchUserProfileAndPosts = async () => {
+  const token = localStorage.getItem('token');
+
+  if (!token) {
+    throw new Error('Token not found. Please log in.');
+  }
+
   try {
-    const response = await fetch(`${BASE_URL}/viewuserpost?userId=${userId}`);
+    const response = await fetch(`${BASE_URL}/viewuserpost`, { // Remove the userId query parameter
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${token}`, // Add the token here
+      },
+    });
+
     if (!response.ok) {
       throw new Error(`Error: ${response.statusText}`);
     }
+
     const data = await response.json();
     return data;
   } catch (error) {
@@ -225,3 +237,100 @@ export const fetchUserProfileAndPosts = async (userId) => {
   }
 };
 
+// Edit a post
+export const editPost = async (postId, postData) => {
+  const token = localStorage.getItem('token');
+
+  if (!token) {
+    throw new Error('Token not found. Please log in.');
+  }
+
+  try {
+    console.log('Sending POST data:', postData);  // Log the post data to check format
+    const response = await fetch(`${BASE_URL}/editpost`, {
+      method: 'PUT',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        postId,
+        ...postData,  // Sending the data as an object
+      }),
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json(); // Capture error details from the response
+      console.error('Error details:', errorData);  // Log error details for better troubleshooting
+      throw new Error(`Error: ${response.statusText}`);
+    }
+
+    const data = await response.json();
+    return data;
+  } catch (error) {
+    console.error('Edit Post error:', error);
+    return null;
+  }
+};
+
+
+// Delete a post
+export const deletePost = async (postId) => {
+  const token = localStorage.getItem('token');
+
+  if (!token) {
+    throw new Error('Token not found. Please log in.');
+  }
+
+  try {
+    const response = await fetch(`${BASE_URL}/delete`, {
+      method: 'PUT',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        postId,
+      }),
+    });
+
+    if (!response.ok) {
+      throw new Error(`Error: ${response.statusText}`);
+    }
+
+    const data = await response.json();
+    return data;
+  } catch (error) {
+    console.error('Delete Post error:', error);
+    return null;
+  }
+};
+
+
+export const fetchAllPosts = async () => {
+  try {
+    const response = await fetch(`${BASE_URL}/allpost`);
+    if (!response.ok) {
+      throw new Error('Failed to fetch posts');
+    }
+    const data = await response.json();
+    return data;
+  } catch (error) {
+    console.error("Error fetching posts:", error);
+    throw error; // Propagate the error to be handled in the component
+  }
+};
+
+export const fetchPostDetails = async (postId) => {
+  try {
+    const response = await fetch(`${BASE_URL}/viewpost?postId=${postId}`);
+    if (!response.ok) {
+      throw new Error('Failed to fetch post details');
+    }
+    const data = await response.json();
+    return data;
+  } catch (error) {
+    console.error("Error fetching post details:", error);
+    throw error;
+  }
+};

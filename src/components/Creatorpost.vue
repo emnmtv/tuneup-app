@@ -15,51 +15,119 @@
 
     <div v-if="user.posts && user.posts.length" class="user-posts">
       <h2>Posts</h2>
-      <div v-for="post in user.posts" :key="post.id" class="post">
-        <h3 class="post-title">{{ post.title }}</h3>
-        <p class="post-description">{{ post.description }}</p>
-        
+      <div v-for="(post, ) in user.posts" :key="post.id" class="post">
+        <h3 v-if="!post.isEditing" class="post-title">{{ post.title }}</h3>
+        <input v-else v-model="post.title" class="post-title-input" />
+
+        <p v-if="!post.isEditing" class="post-description">{{ post.description }}</p>
+        <textarea v-else v-model="post.description" class="post-description-input"></textarea>
+
         <div v-if="post.image" class="post-media">
           <img :src="post.image" alt="Post image" class="post-image" />
         </div>
-        
+
         <div v-if="post.video" class="post-media">
           <video controls :src="post.video" class="post-video"></video>
         </div>
+
+        <!-- Edit and Delete Buttons -->
+        <button v-if="!post.isEditing" @click="startEditing(post)" class="edit-btn">Edit</button>
+        <button v-if="post.isEditing" @click="savePost(post)" class="save-btn">Save</button>
+        <button @click="deletePost(post.id)" class="delete-btn">Delete</button>
       </div>
     </div>
   </div>
 </template>
 
 <script>
-import { fetchUserProfileAndPosts } from '../authService.js';
+import { fetchUserProfileAndPosts, editPost, deletePost } from '../authService.js';
 
 export default {
   data() {
     return {
       user: null,
-      userId: 1, // The userId to fetch; you can update this as necessary
     };
   },
   async created() {
-    // Ensure the component isn't fetching again once the user data is set
-    if (!this.user) {
-      console.log('Fetching user data...');
-      try {
-        const userData = await fetchUserProfileAndPosts(this.userId);
-        if (userData) {
-          this.user = userData;
-          console.log('User data fetched:', userData);
-        } else {
-          console.log('No user data found');
-        }
-      } catch (error) {
-        console.error('Failed to fetch user data:', error);
+    try {
+      const userData = await fetchUserProfileAndPosts();
+      if (userData) {
+        this.user = userData;
+        console.log('User data fetched:', userData);
+      } else {
+        console.log('No user data found');
+      }
+    } catch (error) {
+      console.error('Failed to fetch user data:', error);
+    }
+  },
+  methods: {
+    startEditing(post) {
+      // Start editing the post
+      post.isEditing = true;
+    },
+
+    async savePost(post) {
+  try {
+    const updatedPostData = {
+      title: post.title,
+      description: post.description,
+      // You can include other fields like image, video if needed
+    };
+    const updatedPost = await editPost(post.id, updatedPostData);
+    if (updatedPost) {
+      post.isEditing = false; // Stop editing once saved
+
+      // Update the post array reactively
+      const postIndex = this.user.posts.findIndex(p => p.id === post.id);
+      if (postIndex !== -1) {
+        // Using Vue.set to ensure reactivity
+        this.$set(this.user.posts, postIndex, updatedPost);
+        console.log('Post updated:', updatedPost);
       }
     }
+  } catch (error) {
+    console.error('Error editing post:', error);
+  }
+},
+
+
+    async deletePost(postId) {
+      try {
+        const result = await deletePost(postId);
+        if (result) {
+          this.user.posts = this.user.posts.filter(post => post.id !== postId);
+          console.log('Post deleted:', postId);
+        }
+      } catch (error) {
+        console.error('Error deleting post:', error);
+      }
+    },
   },
 };
 </script>
+
+<style scoped>
+.post-title-input, .post-description-input {
+  width: 100%;
+  padding: 8px;
+  margin: 8px 0;
+}
+
+.save-btn {
+  background-color: #4CAF50;
+  color: white;
+  padding: 10px;
+}
+
+.edit-btn, .delete-btn {
+  background-color: #f44336;
+  color: white;
+  padding: 10px;
+}
+</style>
+
+
 
 
 <style scoped>
