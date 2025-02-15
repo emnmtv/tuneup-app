@@ -2,6 +2,9 @@
     <div v-if="post" class="post-details">
       <h1>{{ post.title }}</h1>
       <p>{{ post.description }}</p>
+      <p>{{ post.detailedDescription }}</p>
+      <p>{{ post.remarks }}</p>
+      <p>{{ post.ammount }}</p>
   
       <div v-if="post.image" class="post-media">
         <img :src="post.image" alt="Post image" class="post-image" />

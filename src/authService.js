@@ -178,6 +178,9 @@ export const createPost = async (data) => {
   const formData = new FormData();
   formData.append('title', data.title);
   formData.append('description', data.description);
+  formData.append('detailedDescription', data.detailedDescription || ''); // New field
+  formData.append('amount', data.amount || ''); // New field
+  formData.append('remarks', data.remarks || ''); // New field
 
   if (data.image) {
     formData.append('image', data.image); // File object
@@ -208,8 +211,6 @@ export const createPost = async (data) => {
   }
 };
 
-
-
 export const fetchUserProfileAndPosts = async () => {
   const token = localStorage.getItem('token');
 
@@ -237,8 +238,7 @@ export const fetchUserProfileAndPosts = async () => {
   }
 };
 
-// Edit a post
-export const editPost = async (postId, postData) => {
+export const editPost = async (postId, postData) => { 
   const token = localStorage.getItem('token');
 
   if (!token) {
@@ -246,7 +246,6 @@ export const editPost = async (postId, postData) => {
   }
 
   try {
-    console.log('Sending POST data:', postData);  // Log the post data to check format
     const response = await fetch(`${BASE_URL}/editpost`, {
       method: 'PUT',
       headers: {
@@ -254,14 +253,14 @@ export const editPost = async (postId, postData) => {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        postId,
-        ...postData,  // Sending the data as an object
+        postId: Number(postId), // Convert to integer
+        ...postData,
       }),
     });
 
     if (!response.ok) {
-      const errorData = await response.json(); // Capture error details from the response
-      console.error('Error details:', errorData);  // Log error details for better troubleshooting
+      const errorData = await response.json();
+      console.error('Error details:', errorData);
       throw new Error(`Error: ${response.statusText}`);
     }
 

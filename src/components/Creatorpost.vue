@@ -15,19 +15,43 @@
 
     <div v-if="user.posts && user.posts.length" class="user-posts">
       <h2>Posts</h2>
-      <div v-for="(post, ) in user.posts" :key="post.id" class="post">
+      <div v-for="post in user.posts" :key="post.id" class="post">
+        <!-- Title -->
         <h3 v-if="!post.isEditing" class="post-title">{{ post.title }}</h3>
-        <input v-else v-model="post.title" class="post-title-input" />
+        <input v-else v-model="post.editedTitle" class="post-title-input" />
 
+        <!-- Description -->
         <p v-if="!post.isEditing" class="post-description">{{ post.description }}</p>
-        <textarea v-else v-model="post.description" class="post-description-input"></textarea>
+        <textarea v-else v-model="post.editedDescription" class="post-description-input"></textarea>
 
+        <!-- Detailed Description -->
+        <p v-if="!post.isEditing" class="post-detailed-description">{{ post.detailedDescription }}</p>
+        <textarea v-else v-model="post.editedDetailedDescription" class="post-detailed-description-input"></textarea>
+
+        <!-- Amount -->
+        <p v-if="!post.isEditing" class="post-amount">Amount: {{ post.amount }}</p>
+        <input v-else v-model="post.editedAmount" type="number" class="post-amount-input" />
+
+        <!-- Remarks -->
+        <p v-if="!post.isEditing" class="post-remarks">Remarks: {{ post.remarks }}</p>
+        <input v-else v-model="post.editedRemarks" class="post-remarks-input" />
+
+        <!-- Image -->
         <div v-if="post.image" class="post-media">
           <img :src="post.image" alt="Post image" class="post-image" />
         </div>
+        <div v-if="post.isEditing">
+          <input type="file" @change="handleImageUpload(post, $event)" accept="image/*" />
+          <button v-if="post.newImage" @click="post.newImage = null">Remove New Image</button>
+        </div>
 
+        <!-- Video -->
         <div v-if="post.video" class="post-media">
           <video controls :src="post.video" class="post-video"></video>
+        </div>
+        <div v-if="post.isEditing">
+          <input type="file" @change="handleVideoUpload(post, $event)" accept="video/*" />
+          <button v-if="post.newVideo" @click="post.newVideo = null">Remove New Video</button>
         </div>
 
         <!-- Edit and Delete Buttons -->
@@ -65,32 +89,51 @@ export default {
     startEditing(post) {
       // Start editing the post
       post.isEditing = true;
+      post.editedTitle = post.title;
+      post.editedDescription = post.description;
+      post.editedDetailedDescription = post.detailedDescription;
+      post.editedAmount = post.amount;
+      post.editedRemarks = post.remarks;
+      post.newImage = null;
+      post.newVideo = null;
+    },
+
+    handleImageUpload(post, event) {
+      const file = event.target.files[0];
+      if (file) {
+        post.newImage = file;
+      }
+    },
+
+    handleVideoUpload(post, event) {
+      const file = event.target.files[0];
+      if (file) {
+        post.newVideo = file;
+      }
     },
 
     async savePost(post) {
-  try {
-    const updatedPostData = {
-      title: post.title,
-      description: post.description,
-      // You can include other fields like image, video if needed
-    };
-    const updatedPost = await editPost(post.id, updatedPostData);
-    if (updatedPost) {
-      post.isEditing = false; // Stop editing once saved
+      try {
+        const postData = {
+          title: post.editedTitle,
+          description: post.editedDescription,
+          detailedDescription: post.editedDetailedDescription,
+          amount: post.editedAmount,
+          remarks: post.editedRemarks,
+          image: post.newImage || post.image,
+          video: post.newVideo || post.video,
+        };
 
-      // Update the post array reactively
-      const postIndex = this.user.posts.findIndex(p => p.id === post.id);
-      if (postIndex !== -1) {
-        // Using Vue.set to ensure reactivity
-        this.$set(this.user.posts, postIndex, updatedPost);
-        console.log('Post updated:', updatedPost);
+        const updatedPost = await editPost(post.id, postData);
+        if (updatedPost) {
+          post.isEditing = false;
+          Object.assign(post, updatedPost); // Directly update the post object
+          console.log('Post updated:', updatedPost);
+        }
+      } catch (error) {
+        console.error('Error editing post:', error);
       }
-    }
-  } catch (error) {
-    console.error('Error editing post:', error);
-  }
-},
-
+    },
 
     async deletePost(postId) {
       try {
@@ -108,110 +151,64 @@ export default {
 </script>
 
 <style scoped>
-.post-title-input, .post-description-input {
-  width: 100%;
-  padding: 8px;
-  margin: 8px 0;
-}
-
-.save-btn {
-  background-color: #4CAF50;
-  color: white;
-  padding: 10px;
-}
-
-.edit-btn, .delete-btn {
-  background-color: #f44336;
-  color: white;
-  padding: 10px;
-}
-</style>
-
-
-
-
-<style scoped>
-/* General styling for the profile */
 .user-profile {
-  font-family: Arial, sans-serif;
-  margin: 20px;
   padding: 20px;
-  border-radius: 8px;
-  background-color: #f9f9f9;
-  max-width: 800px;
-  margin: 0 auto;
 }
 
 .user-name {
-  font-size: 2em;
-  color: #333;
+  font-size: 24px;
   margin-bottom: 10px;
 }
 
 .user-email,
 .user-phone,
 .user-address {
-  font-size: 1.1em;
-  color: #555;
   margin-bottom: 5px;
 }
 
 .profile-info {
-  margin-top: 30px;
-}
-
-.profile-info h2 {
-  font-size: 1.5em;
-  color: #333;
-  margin-bottom: 10px;
-}
-
-.profile-info p {
-  font-size: 1.1em;
-  color: #555;
+  margin-top: 20px;
 }
 
 .user-posts {
-  margin-top: 30px;
-}
-
-.user-posts h2 {
-  font-size: 1.5em;
-  color: #333;
-  margin-bottom: 10px;
+  margin-top: 20px;
 }
 
 .post {
-  margin-bottom: 20px;
-  border: 1px solid #ddd;
-  padding: 15px;
-  border-radius: 8px;
-  background-color: #fff;
+  border: 1px solid #ccc;
+  padding: 10px;
+  margin-bottom: 10px;
 }
 
 .post-title {
-  font-size: 1.3em;
-  color: #333;
+  font-size: 18px;
+  margin-bottom: 5px;
 }
 
-.post-description {
-  font-size: 1.1em;
-  color: #666;
+.post-description,
+.post-detailed-description,
+.post-amount,
+.post-remarks {
+  margin-bottom: 10px;
 }
 
 .post-media {
-  margin-top: 15px;
+  margin-bottom: 10px;
 }
 
 .post-image {
   max-width: 100%;
   height: auto;
-  border-radius: 8px;
 }
 
 .post-video {
-  width: 100%;
+  max-width: 100%;
   height: auto;
-  border-radius: 8px;
+}
+
+.edit-btn,
+.save-btn,
+.delete-btn {
+  margin-right: 10px;
 }
 </style>
