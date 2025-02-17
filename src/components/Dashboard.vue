@@ -1,27 +1,24 @@
 <template>
-  <div v-if="posts && posts.length" class="posts-list">
-    <div v-for="post in posts" :key="post.id" class="post">
-      <h3>{{ post.title }}</h3>
-      <p>{{ post.description }}</p>
-
+  <div v-if="posts && posts.length" class="posts-grid">
+    <div v-for="post in posts" :key="post.id" class="post-card">
       <div v-if="post.image" class="post-media">
         <img :src="post.image" alt="Post image" class="post-image" />
       </div>
+      
+      <div class="post-content">
+        <h3 class="post-title">{{ post.title }}</h3>
+        <p class="post-description">{{ post.description }}</p>
+        
+        <div v-if="post.user" class="user-info">
+          <h4>{{ post.user.firstName }} {{ post.user.lastName }}</h4>
+          <p class="profession">{{ post.user.creatorProfile?.profession }}</p>
+          <p class="genre">{{ post.user.creatorProfile?.genre }}</p>
+        </div>
 
-      <div v-if="post.video" class="post-media">
-        <video controls :src="post.video" class="post-video"></video>
+        <router-link :to="{ name: 'PostDetails', params: { postId: post.id } }">
+          <button class="view-details-btn">View Details</button>
+        </router-link>
       </div>
-
-      <div v-if="post.user" class="user-info">
-        <h4>Created by: {{ post.user.firstName }} {{ post.user.lastName }}</h4>
-        <p>Profession: {{ post.user.creatorProfile?.profession }}</p>
-        <p>Genre: {{ post.user.creatorProfile?.genre }}</p>
-      </div>
-
-      <!-- View Details Button -->
-      <router-link :to="{ name: 'PostDetails', params: { postId: post.id } }">
-        <button class="view-details-btn">View Details</button>
-      </router-link>
     </div>
   </div>
 
@@ -52,46 +49,91 @@ export default {
 </script>
 
 <style scoped>
-.posts-list {
-  padding: 20px;
+.posts-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 2rem;
+  padding: 2rem;
 }
 
-.post {
-  margin-bottom: 20px;
-  border-bottom: 1px solid #ccc;
-  padding-bottom: 10px;
+.post-card {
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  transition: transform 0.2s, box-shadow 0.2s;
+  overflow: hidden;
+}
+
+.post-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.post-media {
+  width: 100%;
+  height: 200px;
+  overflow: hidden;
+}
+
+.post-image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.post-content {
+  padding: 1.5rem;
 }
 
 .post-title {
-  font-size: 1.5rem;
-  font-weight: bold;
+  font-size: 1.25rem;
+  margin: 0 0 1rem 0;
+  color: #333;
 }
 
 .post-description {
-  margin-top: 10px;
-}
-
-.post-media img, .post-media video {
-  max-width: 100%;
-  margin-top: 10px;
+  font-size: 0.9rem;
+  color: #666;
+  margin-bottom: 1rem;
 }
 
 .user-info {
-  margin-top: 15px;
-  font-style: italic;
+  padding: 1rem 0;
+  border-top: 1px solid #eee;
+}
+
+.user-info h4 {
+  margin: 0 0 0.5rem 0;
+  color: #333;
+}
+
+.profession, .genre {
+  font-size: 0.9rem;
+  color: #666;
+  margin: 0.25rem 0;
 }
 
 .view-details-btn {
-  margin-top: 10px;
-  padding: 8px 16px;
+  width: 100%;
+  padding: 0.75rem;
   background-color: #4CAF50;
   color: white;
   border: none;
   border-radius: 4px;
   cursor: pointer;
+  font-weight: 500;
+  margin-top: 1rem;
 }
 
 .view-details-btn:hover {
   background-color: #45a049;
+}
+
+@media (max-width: 768px) {
+  .posts-grid {
+    grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+    gap: 1rem;
+    padding: 1rem;
+  }
 }
 </style>

@@ -8,6 +8,7 @@ const form = ref({
   firstName: "",
   lastName: "",
   phoneNumber: "",
+  dateOfBirth: "",
 });
 
 const verificationCode = ref("");
@@ -76,6 +77,9 @@ const handleVerify = async () => {
 
       <label>Phone Number:</label>
       <input v-model="form.phoneNumber" type="tel" />
+
+      <label>Date of Birth:</label>
+      <input v-model="form.dateOfBirth" type="date" required />
 
       <button type="submit" :disabled="loading">
         {{ loading ? "Registering..." : "Register" }}
