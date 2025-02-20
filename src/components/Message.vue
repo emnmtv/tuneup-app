@@ -1,36 +1,60 @@
 <template>
-  <div>
-    <h2>Chat</h2>
-    <div class="user-list">
-      <h3>Users</h3>
+  <div class="chat-container">
+    <!-- Sidebar for user list -->
+    <div class="sidebar">
+      <h3>Chats</h3>
       <ul>
-        <li v-for="chat in chatHistory" :key="chat.user.id" @click="selectUser(chat.user.id)">
+        <li
+          v-for="chat in chatHistory"
+          :key="chat.user.id"
+          :class="{ active: chat.user.id === selectedReceiverId }"
+          @click="selectUser(chat.user.id)"
+        >
           {{ chat.user.firstName }} {{ chat.user.lastName }}
         </li>
       </ul>
     </div>
-    <div v-if="selectedReceiverId">
-      <h3>Conversation with {{ selectedUserName }}</h3>
-      <div v-for="msg in selectedUserMessages" :key="msg.createdAt">
-        <p><strong>{{ msg.senderName }}:</strong> {{ msg.content }}</p>
+
+    <!-- Chat window -->
+    <div class="chat-window" v-if="selectedReceiverId">
+      <div class="chat-header">
+        <h3>{{ selectedUserName }}</h3>
       </div>
-      <form @submit.prevent="handleSendMessage">
-        <input v-model="messageContent" placeholder="Type your message" required />
-        <button type="submit">Send</button>
-      </form>
-      <div v-if="isCreator">
-        <form @submit.prevent="handlePayment">
-          <h4>Initiate Payment</h4>
-          <input v-model="paymentAmount" type="number" placeholder="Amount" required />
-          <input v-model="paymentDescription" type="text" placeholder="Description" required />
-          <input v-model="paymentRemarks" type="text" placeholder="Remarks" required />
-          <button type="submit">Pay</button>
-        </form>
+
+      <div class="chat-messages">
+        <div
+          v-for="msg in selectedUserMessages"
+          :key="msg.createdAt"
+          :class="{ 'message-sent': msg.senderId === currentUserId, 'message-received': msg.senderId !== currentUserId }"
+        >
+          <p>{{ msg.content }}</p>
+          <span class="timestamp">{{ new Date(msg.createdAt).toLocaleTimeString() }}</span>
+        </div>
+      </div>
+
+      <!-- Message input -->
+      <div class="chat-input">
+        <input v-model="messageContent" placeholder="Type your message..." />
+        <button @click="handleSendMessage">Send</button>
+      </div>
+
+      <!-- Payment section (visible only to creators) -->
+      <div class="payment-section" v-if="isCreator">
+        <h4>Initiate Payment</h4>
+        <input v-model="paymentAmount" type="number" placeholder="Amount" />
+        <input v-model="paymentDescription" type="text" placeholder="Description" />
+        <input v-model="paymentRemarks" type="text" placeholder="Remarks" />
+        <button @click="handlePayment">Create Payment Link</button>
         <div v-if="paymentLink">
-          <p>Payment link created successfully:</p>
+          <p>Payment link:</p>
           <a :href="paymentLink" target="_blank">{{ paymentLink }}</a>
         </div>
       </div>
+    </div>
+
+    <!-- Placeholder for when no user is selected -->
+    <div v-else class="chat-placeholder">
+      <p>Select a user to start chatting</p>
     </div>
   </div>
 </template>
@@ -51,6 +75,7 @@ export default {
       paymentRemarks: '',
       paymentLink: '',
       isCreator: localStorage.getItem('userRole') === 'creator',
+      currentUserId: localStorage.getItem('userId'),
     };
   },
   async created() {
@@ -71,30 +96,24 @@ export default {
       this.selectedUserName = userChat ? `${userChat.user.firstName} ${userChat.user.lastName}` : '';
     },
     async handleSendMessage() {
-      if (!this.selectedReceiverId) {
-        alert('Please select a user to send a message to.');
-        return;
-      }
+      if (!this.selectedReceiverId) return alert('Select a user to send a message.');
 
       try {
         await sendMessage(this.selectedReceiverId, this.messageContent);
-        this.messageContent = ''; // Clear the input after sending
-        await this.loadChatHistory(); // Reload chat history to see the new message
-        this.selectUser(this.selectedReceiverId); // Refresh the selected user's messages
+        this.messageContent = '';
+        await this.loadChatHistory();
+        this.selectUser(this.selectedReceiverId);
       } catch (error) {
         console.error('Error sending message:', error);
       }
     },
     async handlePayment() {
-      if (!this.selectedReceiverId) {
-        alert('Please select a user to send a payment to.');
-        return;
-      }
+      if (!this.selectedReceiverId) return alert('Select a user to send a payment to.');
 
       try {
         const paymentData = await initiatePayment(this.paymentAmount, this.paymentDescription, this.paymentRemarks);
-        this.paymentLink = paymentData.paymentUrl; // Store the payment link
-        this.paymentAmount = ''; // Clear the input fields
+        this.paymentLink = paymentData.paymentUrl;
+        this.paymentAmount = '';
         this.paymentDescription = '';
         this.paymentRemarks = '';
       } catch (error) {
@@ -106,20 +125,115 @@ export default {
 </script>
 
 <style scoped>
-.user-list {
-  margin-bottom: 20px;
+.chat-container {
+  display: flex;
+  height: 100vh;
+  font-family: Arial, sans-serif;
 }
-.user-list ul {
-  list-style-type: none;
+
+.sidebar {
+  width: 25%;
+  background-color: #f7f7f7;
+  padding: 10px;
+  border-right: 1px solid #ddd;
+}
+
+.sidebar ul {
+  list-style: none;
   padding: 0;
 }
-.user-list li {
+
+.sidebar li {
+  padding: 10px;
   cursor: pointer;
-  padding: 5px;
-  border: 1px solid #ccc;
-  margin: 5px 0;
+  border-radius: 8px;
 }
-.user-list li:hover {
-  background-color: #f0f0f0;
+
+.sidebar li.active,
+.sidebar li:hover {
+  background-color: #007bff;
+  color: white;
+}
+
+.chat-window {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  padding: 10px;
+  background-color: #fff;
+}
+
+.chat-header {
+  padding: 10px 0;
+  border-bottom: 1px solid #ddd;
+}
+
+.chat-messages {
+  flex: 1;
+  overflow-y: auto;
+  padding: 10px 0;
+}
+
+.message-sent {
+  text-align: right;
+  background-color: #007bff;
+  color: white;
+  padding: 8px 12px;
+  border-radius: 15px;
+  margin: 5px 0;
+  max-width: 70%;
+  align-self: flex-end;
+}
+
+.message-received {
+  text-align: left;
+  background-color: #e9ecef;
+  padding: 8px 12px;
+  border-radius: 15px;
+  margin: 5px 0;
+  max-width: 70%;
+  align-self: flex-start;
+}
+
+.timestamp {
+  font-size: 0.8em;
+  color: #777;
+  display: block;
+  margin-top: 2px;
+}
+
+.chat-input {
+  display: flex;
+  padding: 10px 0;
+  border-top: 1px solid #ddd;
+}
+
+.chat-input input {
+  flex: 1;
+  padding: 10px;
+  border-radius: 20px;
+  border: 1px solid #ccc;
+  margin-right: 10px;
+}
+
+.chat-input button {
+  padding: 10px 20px;
+  border: none;
+  background-color: #007bff;
+  color: white;
+  border-radius: 20px;
+  cursor: pointer;
+}
+
+.payment-section {
+  margin-top: 10px;
+}
+
+.chat-placeholder {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #777;
 }
 </style>

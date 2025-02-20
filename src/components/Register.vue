@@ -92,8 +92,10 @@ const handleVerify = async () => {
 
 <template>
   <div class="register-container">
-    <h2>welcome to tuneup </h2>
-    <p>Hiring musicians has never been easier</p>
+    <div class="header">
+      <h2>welcome to tuneup </h2>
+      <p>Hiring musicians has never been easier</p>
+    </div>
 
     <form @submit.prevent="handleRegister">
       <label>Email:</label>
@@ -134,7 +136,7 @@ const handleVerify = async () => {
   </div>
 </template>
 
-<style>
+<style scoped>
 body, html {
   margin: 0;
   padding: 0;
@@ -150,7 +152,7 @@ body, html {
   width: 400px; /* Fixed width */
   height: 600px; /* Increased height */
   padding: 20px; /* Padding for spacing */
-  background: rgba(255, 255, 255, 0.9); /* Slightly more opaque background */
+  background: rgba(255, 255, 255, 1); /* Change to fully opaque background */
   border-radius: 15px; /* Rounded corners */
   box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2); /* Deeper shadow for depth */
   font-family: 'Arial', sans-serif; /* Modern font */
@@ -291,5 +293,20 @@ button:hover {
     padding: 15px; /* Increase button padding for easier tapping */
     font-size: 1em; /* Adjust button font size */
   }
+}
+
+.header {
+  text-align: center; /* Center the text */
+  margin-bottom: 20px; /* Space below the header */
+}
+
+.header h2 {
+  font-size: 2em; /* Larger font size for the heading */
+  color: #333; /* Darker color for the heading */
+}
+
+.header p {
+  font-size: 1.2em; /* Slightly larger font size for the paragraph */
+  color: #666; /* Lighter color for the paragraph */
 }
 </style>

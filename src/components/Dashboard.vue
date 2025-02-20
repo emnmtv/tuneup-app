@@ -1,6 +1,11 @@
 <template>
   <div v-if="posts && posts.length" class="posts-grid">
-    <div v-for="post in posts" :key="post.id" class="post-card">
+    <router-link
+      v-for="post in posts"
+      :key="post.id"
+      :to="{ name: 'PostDetails', params: { postId: post.id } }"
+      class="post-card"
+    >
       <div v-if="post.image" class="post-media">
         <img :src="post.image" alt="Post image" class="post-image" />
       </div>
@@ -14,12 +19,8 @@
           <p class="profession">{{ post.user.creatorProfile?.profession }}</p>
           <p class="genre">{{ post.user.creatorProfile?.genre }}</p>
         </div>
-
-        <router-link :to="{ name: 'PostDetails', params: { postId: post.id } }">
-          <button class="view-details-btn">View Details</button>
-        </router-link>
       </div>
-    </div>
+    </router-link>
   </div>
 
   <div v-else>
@@ -62,6 +63,8 @@ export default {
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
   transition: transform 0.2s, box-shadow 0.2s;
   overflow: hidden;
+  text-decoration: none;
+  color: inherit;
 }
 
 .post-card:hover {
@@ -111,22 +114,6 @@ export default {
   font-size: 0.9rem;
   color: #666;
   margin: 0.25rem 0;
-}
-
-.view-details-btn {
-  width: 100%;
-  padding: 0.75rem;
-  background-color: #4CAF50;
-  color: white;
-  border: none;
-  border-radius: 4px;
-  cursor: pointer;
-  font-weight: 500;
-  margin-top: 1rem;
-}
-
-.view-details-btn:hover {
-  background-color: #45a049;
 }
 
 @media (max-width: 768px) {

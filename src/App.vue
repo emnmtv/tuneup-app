@@ -1,60 +1,63 @@
 <template>
   <div class="app-container">
-    <!-- Show sidebar only if not on login or register page -->
-    <Sidenav v-if="showSidebar" :is-collapsed="isCollapsed" @toggle="toggleSidenav" />
-    <div class="content" :style="{ marginLeft: isCollapsed ? '70px' : '250px' }">
+    <!-- Show TopNav only if not on login or register page -->
+    <TopNav v-if="!isAuthRoute" />
+
+    <div class="content">
       <router-view />
     </div>
   </div>
 </template>
 
 <script>
-import Sidenav from "./components/Sidenav.vue";
+import TopNav from './components/TopNav.vue';
 import { useRoute } from "vue-router";
-import { computed, ref } from "vue";
+import { computed, ref, onMounted, onUnmounted } from "vue";
 
 export default {
   components: {
-    Sidenav,
+    TopNav,
   },
   setup() {
     const route = useRoute();
-    const isCollapsed = ref(false); // Track the collapsed state
+    const isMobile = ref(window.innerWidth <= 768);
 
-    // Define routes where sidebar should NOT be shown
+    // Routes where TopNav should not be shown
     const authRoutes = ["/", "/register"];
+    const isAuthRoute = computed(() => authRoutes.includes(route.path));
 
-    // Show sidebar if NOT on auth routes (login & register)
-    const showSidebar = computed(() => !authRoutes.includes(route.path));
-
-    const toggleSidenav = () => {
-      isCollapsed.value = !isCollapsed.value; // Toggle the collapsed state
+    const handleResize = () => {
+      isMobile.value = window.innerWidth <= 768;
     };
 
+    onMounted(() => window.addEventListener('resize', handleResize));
+    onUnmounted(() => window.removeEventListener('resize', handleResize));
+
     return {
-      showSidebar,
-      isCollapsed,
-      toggleSidenav,
+      isMobile,
+      isAuthRoute,
     };
   },
 };
 </script>
 
-<style>
+<style scoped>
+/* Ensure the app takes the full height of the viewport */
 .app-container {
   display: flex;
+  flex-direction: column;
+  height: 100vh;
+  margin: 0;
+  padding: 0;
+  overflow: hidden; /* Prevent unnecessary scrolling */
 }
 
 .content {
   flex-grow: 1;
   padding: 20px;
-  height: calc(100vh - 0px); /* Adjust this value based on the height of the Sidenav */
-  overflow-y: auto; /* Allow scrolling in the content area */
-  transition: margin-left 0.3s ease; /* Add transition for margin-left */
-  margin-left: 250px; /* Default margin for expanded state */
-}
-
-.content.collapsed {
-  margin-left: 70px; /* Margin for collapsed state */
+  overflow-y: auto; /* Allow scroll only if content exceeds viewport */
+  height: 100%;
+  box-sizing: border-box;
+  margin: 0;
 }
 </style>

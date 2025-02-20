@@ -1,4 +1,5 @@
-const BASE_URL = "http://localhost:3200/auth"; // Base API URL
+// const BASE_URL = "http://localhost:3200/auth"; // Base API URL
+const BASE_URL = "http://192.168.0.104:3200/auth"; // Base API URL
 
 export const loginUser = async (email, password) => {
   try {
