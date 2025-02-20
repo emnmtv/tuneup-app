@@ -4,54 +4,16 @@
       <i :class="isCollapsed ? 'fas fa-chevron-right' : 'fas fa-chevron-left'"></i>
     </div>
 
-    <!-- Common links for all users -->
     <div class="nav-links">
-      <router-link to="/dashboard">
-        <i class="fas fa-home"></i>
-        <span v-show="!isCollapsed">Dashboard</span>
-      </router-link>
-      <router-link to="/profile">
-        <i class="fas fa-user"></i>
-        <span v-show="!isCollapsed">Profile</span>
-      </router-link>
-      <router-link to="/settings">
-        <i class="fas fa-cog"></i>
-        <span v-show="!isCollapsed">Settings</span>
-      </router-link>
-
-      <!-- Creator and Admin only links -->
-      <template v-if="userRole === 'creator' || userRole === 'admin'">
-        <router-link to="/creatorprofile">
-          <i class="fas fa-id-card"></i>
-          <span v-show="!isCollapsed">Creator Profile</span>
-        </router-link>
-        <router-link to="/createpost">
-          <i class="fas fa-plus-circle"></i>
-          <span v-show="!isCollapsed">Create Post</span>
-        </router-link>
-        <router-link to="/creatorpost">
-          <i class="fas fa-list"></i>
-          <span v-show="!isCollapsed">Creator Posts</span>
-        </router-link>
-      </template>
-
-      <!-- Regular user only links -->
-      <template v-if="userRole === 'user'">
-        <router-link to="/upgrade">
-          <i class="fas fa-arrow-up"></i>
-          <span v-show="!isCollapsed">Upgrade to Creator</span>
-        </router-link>
-      </template>
-
-      <!-- Admin only links -->
-      <template v-if="userRole === 'admin'">
-        <router-link to="/admin/users">
-          <i class="fas fa-users"></i>
-          <span v-show="!isCollapsed">Manage Users</span>
-        </router-link>
-        <router-link to="/admin/posts">
-          <i class="fas fa-tasks"></i>
-          <span v-show="!isCollapsed">Manage Posts</span>
+      <template v-if="userRole && navigationItems[userRole]">
+        <router-link 
+          v-for="item in navigationItems[userRole]" 
+          :key="item.path"
+          :to="item.path"
+          class="nav-link"
+        >
+          <i class="fas" :class="item.icon"></i>
+          <span v-show="!isCollapsed">{{ item.name }}</span>
         </router-link>
       </template>
     </div>
@@ -65,10 +27,37 @@
 
 <script>
 export default {
+  props: {
+    isCollapsed: {
+      type: Boolean,
+      default: false,
+    },
+  },
   data() {
     return {
       userRole: null,
-      isCollapsed: false
+      navigationItems: {
+        admin: [
+          { name: 'Dashboard', path: '/admin-dashboard', icon: 'fa-home' },
+          { name: 'Manage Users', path: '/admin/users', icon: 'fa-users' },
+          { name: 'Manage Posts', path: '/admin/posts', icon: 'fa-tasks' },
+          { name: 'Profile', path: '/profile', icon: 'fa-user' },
+        ],
+        creator: [
+          { name: 'Dashboard', path: '/dashboard', icon: 'fa-home' },
+          { name: 'Profile', path: '/profile', icon: 'fa-user' },
+          { name: 'Creator Profile', path: '/creatorprofile', icon: 'fa-id-card' },
+          { name: 'Create Post', path: '/createpost', icon: 'fa-plus-circle' },
+          { name: 'Creator Posts', path: '/creatorpost', icon: 'fa-list' },
+          { name: 'Messages', path: '/messages', icon: 'fa-envelope' },
+        ],
+        user: [
+          { name: 'Upgrade to Creator', path: '/upgrade', icon: 'fa-arrow-up' },
+          { name: 'Profile', path: '/profile', icon: 'fa-user' },
+          { name: 'Dashboard', path: '/dashboard', icon: 'fa-home' },
+          { name: 'Messages', path: '/messages', icon: 'fa-envelope' },
+        ],
+      }
     }
   },
   created() {
@@ -77,7 +66,7 @@ export default {
   },
   methods: {
     toggleNav() {
-      this.isCollapsed = !this.isCollapsed
+      this.$emit('toggle'); // Emit toggle event to parent
     },
     logout() {
       // Clear both token and role
@@ -92,19 +81,35 @@ export default {
 <style scoped>
 .sidenav {
   width: 250px;
-  height: 100vh;
+  height: 100vh; /* Full height of the viewport */
   background: #333;
   color: white;
   display: flex;
   flex-direction: column;
-  padding: 20px;
-  position: relative;
-  transition: all 0.3s ease;
+  padding: 20px 10px; /* Adjusted padding for better fit */
+  position: fixed;
+  transition: width 0.3s ease;
 }
 
 .sidenav.collapsed {
   width: 70px;
-  padding: 20px 10px;
+  padding: 20px 5px; /* Adjust padding for collapsed state */
+}
+
+@media (max-width: 768px) { /* Adjust for smaller screens */
+  .sidenav {
+    width: 100%; /* Full width on small screens */
+    height: auto; /* Allow height to adjust */
+    position: relative; /* Change position to relative */
+  }
+
+  .sidenav.collapsed {
+    width: 100%; /* Full width when collapsed */
+  }
+
+  .toggle-btn {
+    right: 10px; /* Adjust toggle button position */
+  }
 }
 
 .toggle-btn {

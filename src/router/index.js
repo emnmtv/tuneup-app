@@ -9,6 +9,8 @@ import CreatorProfile from "../components/CreatorProfile.vue";
 import CreatePost from "@/components/CreatePost.vue";
 import Creatorpost from "@/components/Creatorpost.vue";
 import PostDetails from "@/components/PostDetails.vue";
+import Message from "@/components/Message.vue";
+
 const routes = [
   { path: "/", component: LoginPage },
   { path: "/dashboard", component: Dashboard },
@@ -19,7 +21,10 @@ const routes = [
   { path: "/creatorprofile", component: CreatorProfile}, // Register Route
   { path: "/createpost", component: CreatePost}, // Register Route
   { path: "/creatorpost", component: Creatorpost}, // Register Route
-  { path: '/post/:postId', name: 'PostDetails', component: PostDetails }
+  { path: '/post/:postId', name: 'PostDetails', component: PostDetails },
+ {path: '/messages', component: Message},
+
+
 ];
 
 const router = createRouter({

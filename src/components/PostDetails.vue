@@ -1,79 +1,113 @@
 <template>
-    <div v-if="post" class="post-details">
-      <h1>{{ post.title }}</h1>
-      <p>{{ post.description }}</p>
-      <p>{{ post.detailedDescription }}</p>
-      <p>{{ post.remarks }}</p>
-      <p>{{ post.ammount }}</p>
-  
-      <div v-if="post.image" class="post-media">
-        <img :src="post.image" alt="Post image" class="post-image" />
-      </div>
-  
-      <div v-if="post.video" class="post-media">
-        <video controls :src="post.video" class="post-video"></video>
-      </div>
-  
-      <!-- User Information -->
-      <div class="user-info">
-        <h3>User Information:</h3>
-        <p><strong>Name:</strong> {{ post.user.firstName }} {{ post.user.lastName }}</p>
-        <p><strong>Email:</strong> {{ post.user.email }}</p>
-        <p><strong>Phone:</strong> {{ post.user.phoneNumber }}</p>
-        <p><strong>Address:</strong> {{ post.user.address }}</p>
-        <p><strong>Date of Birth:</strong> {{ formatDate(post.user.dateOfBirth) }}</p>
-        <p><strong>Role:</strong> {{ post.user.role }}</p>
-        <p><strong>Verified:</strong> {{ post.user.verified ? 'Yes' : 'No' }}</p>
-  
-        <h4>Creator Profile:</h4>
-        <p><strong>Profession:</strong> {{ post.user.creatorProfile.profession }}</p>
-        <p><strong>Genre:</strong> {{ post.user.creatorProfile.genre }}</p>
-        <p><strong>Bio:</strong> {{ post.user.creatorProfile.bio }}</p>
-        <p><strong>Offers:</strong> {{ post.user.creatorProfile.offers }}</p>
-        <p><strong>Type of Profession:</strong> {{ post.user.creatorProfile.typeOfProfession }}</p>
-      </div>
-  
-      <!-- Timestamps -->
-      <div class="timestamps">
-        <p><strong>Created At:</strong> {{ formatDate(post.createdAt) }}</p>
-        <p><strong>Updated At:</strong> {{ formatDate(post.updatedAt) }}</p>
-      </div>
-  
-      <router-link to="/dashboard" class="back-btn">Back to Posts</router-link>
+  <div v-if="post" class="post-details">
+    <h1>{{ post.title }}</h1>
+    <p>{{ post.description }}</p>
+    <p>{{ post.detailedDescription }}</p>
+    <p>{{ post.remarks }}</p>
+    <p>{{ post.amount }}</p>
+
+    <div v-if="post.image" class="post-media">
+      <img :src="post.image" alt="Post image" class="post-image" />
     </div>
-  
-    <div v-else>
-      <p>Loading post details...</p>
+
+    <div v-if="post.video" class="post-media">
+      <video controls :src="post.video" class="post-video"></video>
     </div>
-  </template>
-  
-  <script>
-  import { fetchPostDetails } from '../authService.js';
-  
-  export default {
-    data() {
-      return {
-        post: null,
-        error: null,
-      };
+
+    <!-- User Information -->
+    <div class="user-info">
+      <h3>User Information:</h3>
+      <p><strong>Name:</strong> {{ post.user.firstName }} {{ post.user.lastName }}</p>
+      <p><strong>Email:</strong> {{ post.user.email }}</p>
+      <p><strong>Phone:</strong> {{ post.user.phoneNumber }}</p>
+      <p><strong>Address:</strong> {{ post.user.address }}</p>
+      <p><strong>Date of Birth:</strong> {{ formatDate(post.user.dateOfBirth) }}</p>
+      <p><strong>Role:</strong> {{ post.user.role }}</p>
+      <p><strong>Verified:</strong> {{ post.user.verified ? 'Yes' : 'No' }}</p>
+
+      <h4>Creator Profile:</h4>
+      <p><strong>Profession:</strong> {{ post.user.creatorProfile.profession }}</p>
+      <p><strong>Genre:</strong> {{ post.user.creatorProfile.genre }}</p>
+      <p><strong>Bio:</strong> {{ post.user.creatorProfile.bio }}</p>
+      <p><strong>Offers:</strong> {{ post.user.creatorProfile.offers }}</p>
+      <p><strong>Type of Profession:</strong> {{ post.user.creatorProfile.typeOfProfession }}</p>
+    </div>
+
+    <!-- Timestamps -->
+    <div class="timestamps">
+      <p><strong>Created At:</strong> {{ formatDate(post.createdAt) }}</p>
+      <p><strong>Updated At:</strong> {{ formatDate(post.updatedAt) }}</p>
+    </div>
+
+    <!-- Send Message Button -->
+    <button @click="openMessageModal" class="send-message-btn">Send Message</button>
+
+    <!-- Message Modal -->
+    <div v-if="isModalOpen" class="modal">
+      <div class="modal-content">
+        <span class="close" @click="closeMessageModal">&times;</span>
+        <h2>Send Message to {{ post.user.firstName }}</h2>
+        <textarea v-model="messageContent" placeholder="Type your message here..."></textarea>
+        <button @click="sendMessage">Send</button>
+      </div>
+    </div>
+
+    <router-link to="/dashboard" class="back-btn">Back to Posts</router-link>
+  </div>
+
+  <div v-else>
+    <p>Loading post details...</p>
+  </div>
+</template>
+
+<script>
+import { fetchPostDetails, sendMessage } from '../authService.js';
+
+export default {
+  data() {
+    return {
+      post: null,
+      error: null,
+      isModalOpen: false,
+      messageContent: '',
+    };
+  },
+  async created() {
+    const postId = this.$route.params.postId; // Get the postId from route params
+    try {
+      this.post = await fetchPostDetails(postId);
+    } catch (error) {
+      this.error = 'Failed to load post details';
+      console.error("Error fetching post details:", error);
+    }
+  },
+  methods: {
+    formatDate(dateString) {
+      const options = { year: 'numeric', month: 'long', day: 'numeric' };
+      return new Date(dateString).toLocaleDateString(undefined, options);
     },
-    async created() {
-      const postId = this.$route.params.postId; // Get the postId from route params
+    openMessageModal() {
+      this.isModalOpen = true;
+    },
+    closeMessageModal() {
+      this.isModalOpen = false;
+      this.messageContent = ''; // Clear the message content when closing
+    },
+    async sendMessage() {
       try {
-        this.post = await fetchPostDetails(postId);
+        const receiverId = this.post.user.id; // Assuming the user ID is available
+        await sendMessage(receiverId, this.messageContent);
+        alert('Message sent successfully!');
+        this.closeMessageModal(); // Close the modal after sending
       } catch (error) {
-        this.error = 'Failed to load post details';
-        console.error("Error fetching post details:", error);
+        console.error("Error sending message:", error);
+        alert('Failed to send message');
       }
     },
-    methods: {
-      formatDate(dateString) {
-        const options = { year: 'numeric', month: 'long', day: 'numeric' };
-        return new Date(dateString).toLocaleDateString(undefined, options);
-      },
-    },
-  };
-  </script>
+  },
+};
+</script>
+
   
   <style scoped>
   .post-details {
@@ -103,18 +137,75 @@
     margin-top: 20px;
   }
   
-  .back-btn {
-    display: inline-block;
-    margin-top: 20px;
-    padding: 8px 16px;
-    background-color: #007BFF;
-    color: white;
-    text-decoration: none;
-    border-radius: 4px;
-  }
-  
-  .back-btn:hover {
-    background-color: #0056b3;
-  }
+  .post-details {
+  padding: 20px;
+}
+
+.send-message-btn {
+  margin-top: 20px;
+  padding: 10px 15px;
+  background-color: #007BFF;
+  color: white;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+}
+
+.send-message-btn:hover {
+  background-color: #0056b3;
+}
+
+.modal {
+  position: fixed;
+  z-index: 1000;
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 100%;
+  overflow: auto;
+  background-color: rgba(0, 0, 0, 0.5);
+}
+
+.modal-content {
+  background-color: #fefefe;
+  margin: 15% auto;
+  padding: 20px;
+  border: 1px solid #888;
+  width: 80%;
+}
+
+.close {
+  color: #aaa;
+  float: right;
+  font-size: 28px;
+  font-weight: bold;
+}
+
+.close:hover,
+.close:focus {
+  color: black;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+textarea {
+  width: 100%;
+  height: 100px;
+  margin-top: 10px;
+}
+
+button {
+  margin-top: 10px;
+  padding: 10px 15px;
+  background-color: #28a745;
+  color: white;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+}
+
+button:hover {
+  background-color: #218838;
+}
   </style>
   

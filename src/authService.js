@@ -333,3 +333,77 @@ export const fetchPostDetails = async (postId) => {
     throw error;
   }
 };
+
+export const sendMessage = async (receiverId, content) => {
+  const token = localStorage.getItem('token');
+
+  if (!token) {
+    throw new Error('Token not found. Please log in.');
+  }
+
+  const response = await fetch(`${BASE_URL}/sendmessage`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${token}`,
+    },
+    body: JSON.stringify({ receiverId, content }),
+  });
+
+  if (!response.ok) {
+    const errorResponse = await response.json();
+    throw new Error(errorResponse.error || 'Failed to send message');
+  }
+
+  return await response.json();
+};
+
+export const fetchUsersWithChatHistory = async () => {
+  const token = localStorage.getItem('token');
+
+  if (!token) {
+    throw new Error('Token not found. Please log in.');
+  }
+
+  const response = await fetch(`${BASE_URL}/chat-users`, {
+    method: 'GET',
+    headers: {
+      'Authorization': `Bearer ${token}`,
+    },
+  });
+
+  if (!response.ok) {
+    const errorResponse = await response.json();
+    throw new Error(errorResponse.error || 'Failed to fetch chat history');
+  }
+
+  return await response.json();
+};
+
+export const initiatePayment = async (amount, description, remarks) => {
+  const token = localStorage.getItem('token');
+
+  if (!token) {
+    throw new Error('Token not found. Please log in.');
+  }
+
+  // Convert amount from dollars to cents
+  const amountInCents = amount * 100;
+
+  const response = await fetch(`${BASE_URL}/payment`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${token}`,
+    },
+    body: JSON.stringify({ amount: amountInCents, description, remarks }),
+  });
+
+  if (!response.ok) {
+    const errorResponse = await response.json();
+    throw new Error(errorResponse.error || 'Failed to initiate payment');
+  }
+
+  return await response.json();
+};
+
