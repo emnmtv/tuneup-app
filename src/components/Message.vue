@@ -18,16 +18,18 @@
         <input v-model="messageContent" placeholder="Type your message" required />
         <button type="submit">Send</button>
       </form>
-      <form @submit.prevent="handlePayment">
-        <h4>Initiate Payment</h4>
-        <input v-model="paymentAmount" type="number" placeholder="Amount" required />
-        <input v-model="paymentDescription" type="text" placeholder="Description" required />
-        <input v-model="paymentRemarks" type="text" placeholder="Remarks" required />
-        <button type="submit">Pay</button>
-      </form>
-      <div v-if="paymentLink">
-        <p>Payment link created successfully:</p>
-        <a :href="paymentLink" target="_blank">{{ paymentLink }}</a>
+      <div v-if="isCreator">
+        <form @submit.prevent="handlePayment">
+          <h4>Initiate Payment</h4>
+          <input v-model="paymentAmount" type="number" placeholder="Amount" required />
+          <input v-model="paymentDescription" type="text" placeholder="Description" required />
+          <input v-model="paymentRemarks" type="text" placeholder="Remarks" required />
+          <button type="submit">Pay</button>
+        </form>
+        <div v-if="paymentLink">
+          <p>Payment link created successfully:</p>
+          <a :href="paymentLink" target="_blank">{{ paymentLink }}</a>
+        </div>
       </div>
     </div>
   </div>
@@ -48,6 +50,7 @@ export default {
       paymentDescription: '',
       paymentRemarks: '',
       paymentLink: '',
+      isCreator: localStorage.getItem('userRole') === 'creator',
     };
   },
   async created() {
