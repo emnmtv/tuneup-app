@@ -1,5 +1,19 @@
-// const BASE_URL = "http://localhost:3200/auth"; // Base API URL
-const BASE_URL = "http://192.168.0.104:3200/auth"; // Base API URL
+const BASE_URL = "http://localhost:3200/auth"; // Base API URL
+// const BASE_URL = "http://192.168.0.104:3200/auth"; // Base API URL
+
+// Add this function to parse JWT token
+export const getUserIdFromToken = () => {
+  const token = localStorage.getItem('token');
+  if (!token) return null;
+  
+  try {
+    const payload = JSON.parse(atob(token.split('.')[1]));
+    return payload.userId;
+  } catch (error) {
+    console.error('Error parsing token:', error);
+    return null;
+  }
+};
 
 export const loginUser = async (email, password) => {
   try {
@@ -15,10 +29,9 @@ export const loginUser = async (email, password) => {
 
     const result = await response.json();
 
-    // Store the token and role in localStorage
-    const { token, role } = result; // Assuming the response has 'token' and 'role'
-    localStorage.setItem("jwtToken", token); // Store the token
-    localStorage.setItem("userRole", role); // Store the role
+    // Only store token and role
+    localStorage.setItem("token", result.token);
+    localStorage.setItem("userRole", result.role);
 
     return result;
   } catch (error) {
@@ -354,6 +367,28 @@ export const sendMessage = async (receiverId, content) => {
   if (!response.ok) {
     const errorResponse = await response.json();
     throw new Error(errorResponse.error || 'Failed to send message');
+  }
+
+  return await response.json();
+};
+
+export const fetchMessages = async (otherUserId) => {
+  const token = localStorage.getItem('token');
+
+  if (!token) {
+    throw new Error('Token not found. Please log in.');
+  }
+
+  const response = await fetch(`${BASE_URL}/messages/${otherUserId}`, {
+    method: 'GET',
+    headers: {
+      'Authorization': `Bearer ${token}`,
+    },
+  });
+
+  if (!response.ok) {
+    const errorResponse = await response.json();
+    throw new Error(errorResponse.error || 'Failed to fetch messages');
   }
 
   return await response.json();
