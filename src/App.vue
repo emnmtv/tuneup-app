@@ -1,7 +1,7 @@
 <template>
   <div class="app-container">
-    <!-- Show TopNav only if authenticated and not on login/register pages -->
-    <TopNav v-if="!isAuthRoute && isAuthenticated" />
+    <!-- Use reactive isAuthenticated state -->
+    <TopNav v-if="!isAuthRoute && isAuthenticated" @logout="handleLogout" />
 
     <div class="content">
       <router-view />
@@ -12,7 +12,7 @@
 <script>
 import TopNav from './components/TopNav.vue';
 import { useRoute } from "vue-router";
-import { computed, ref, onMounted, onUnmounted } from "vue";
+import { computed, ref, onMounted, onUnmounted, watch } from "vue";
 
 export default {
   components: {
@@ -21,27 +21,37 @@ export default {
   setup() {
     const route = useRoute();
     const isMobile = ref(window.innerWidth <= 768);
+    const isAuthenticated = ref(!!localStorage.getItem('token'));
 
     // Routes where TopNav should not be shown
     const authRoutes = ["/login", "/register"];
     const isAuthRoute = computed(() => authRoutes.includes(route.path));
-    
-    // Check if user is authenticated
-    const isAuthenticated = computed(() => {
-      return !!localStorage.getItem('token');
-    });
+
+    const handleLogout = () => {
+      isAuthenticated.value = false;
+    };
 
     const handleResize = () => {
       isMobile.value = window.innerWidth <= 768;
     };
 
-    onMounted(() => window.addEventListener('resize', handleResize));
+    // Watch for route changes to update authentication state
+    watch(() => route.path, () => {
+      isAuthenticated.value = !!localStorage.getItem('token');
+    });
+
+    onMounted(() => {
+      window.addEventListener('resize', handleResize);
+      isAuthenticated.value = !!localStorage.getItem('token');
+    });
+    
     onUnmounted(() => window.removeEventListener('resize', handleResize));
 
     return {
       isMobile,
       isAuthRoute,
       isAuthenticated,
+      handleLogout,
     };
   },
 };

@@ -1,29 +1,6 @@
 <template>
   <div class="dashboard-container">
-    <!-- Stats Section -->
-    <div class="stats-section">
-      <div class="stat-card">
-        <i class="material-icons">people</i>
-        <div class="stat-info">
-          <h3>Total Creators</h3>
-          <p>{{ stats.creators }}</p>
-        </div>
-      </div>
-      <div class="stat-card">
-        <i class="material-icons">post_add</i>
-        <div class="stat-info">
-          <h3>Total Posts</h3>
-          <p>{{ stats.posts }}</p>
-        </div>
-      </div>
-      <div class="stat-card">
-        <i class="material-icons">music_note</i>
-        <div class="stat-info">
-          <h3>Active Services</h3>
-          <p>{{ stats.services }}</p>
-        </div>
-      </div>
-    </div>
+   
 
     <!-- Navigation Filters -->
     <div class="navigation-filters">
@@ -186,8 +163,8 @@
       <div class="posts-grid">
         <div 
           v-for="post in filteredPosts" 
-          :key="post.id" 
-          class="post-card"
+      :key="post.id"
+      class="post-card"
           @click="navigateToPost(post.id)"
         >
           <div class="post-media">
@@ -195,19 +172,19 @@
             <div class="post-price" v-if="post.amount">
               ₱{{ formatAmount(post.amount) }}
             </div>
-          </div>
-          
-          <div class="post-content">
-            <h3 class="post-title">{{ post.title }}</h3>
-            <p class="post-description">{{ post.description }}</p>
-            
+      </div>
+      
+      <div class="post-content">
+        <h3 class="post-title">{{ post.title }}</h3>
+        <p class="post-description">{{ post.description }}</p>
+        
             <div class="post-footer">
               <div class="creator-info">
                 <div class="creator-avatar">
                   {{ getInitials(post.user.firstName, post.user.lastName) }}
                 </div>
                 <div class="creator-details">
-                  <h4>{{ post.user.firstName }} {{ post.user.lastName }}</h4>
+          <h4>{{ post.user.firstName }} {{ post.user.lastName }}</h4>
                   <div class="profession-details">
                     <span class="profession" v-if="post.user.creatorProfile?.typeOfProfession">
                       {{ post.user.creatorProfile?.typeOfProfession }}
@@ -225,7 +202,7 @@
           </div>
         </div>
       </div>
-    </div>
+  </div>
   </div>
 </template>
 
@@ -557,7 +534,7 @@ export default {
 <style scoped>
 .dashboard-container {
   padding: 2rem;
-  background-color: #f5f7fb;
+  background-color: #ffffff;
   min-height: 100vh;
   max-width: 1600px;
   margin: 0 auto;

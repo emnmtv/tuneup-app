@@ -75,9 +75,10 @@ export default {
           { name: 'Messages', path: '/messages', icon: 'message' },
         ],
         user: [
+        { name: 'Dashboard', path: '/dashboard', icon: 'dashboard' },
           { name: 'Upgrade to Creator', path: '/upgrade', icon: 'arrow_upward' },
           { name: 'Profile', path: '/profile', icon: 'person' },
-          { name: 'Dashboard', path: '/dashboard', icon: 'dashboard' },
+      
           { name: 'Messages', path: '/messages', icon: 'message' },
         ],
       },
@@ -99,6 +100,9 @@ export default {
       try {
         const success = logoutUser();
         if (success) {
+          // Emit logout event to parent
+          this.$emit('logout');
+          
           await Swal.fire({
             title: 'Logged Out',
             text: 'You have been successfully logged out',

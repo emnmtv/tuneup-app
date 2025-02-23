@@ -12,21 +12,62 @@
     <div class="content-grid">
       <!-- Left Column: Media and Description -->
       <div class="left-column">
-        <div class="media-section">
-          <div v-if="post.image" class="post-media">
-            <img :src="post.image" :alt="post.title" class="post-image" />
+        <!-- Main Media Display -->
+        <div class="main-media-section">
+          <!-- Main Image -->
+          <div v-if="currentMedia.type === 'image'" class="main-media">
+            <img :src="currentMedia.url" :alt="post.title" class="main-image" />
           </div>
-          <div v-if="post.video" class="post-media video-container">
-      <video controls :src="post.video" class="post-video"></video>
-    </div>
+          
+          <!-- Main Video -->
+          <div v-if="currentMedia.type === 'video'" class="main-media video-container">
+            <video 
+              controls 
+              :src="currentMedia.url" 
+              class="main-video"
+              controlsList="nodownload"
+            >
+              Your browser does not support the video tag.
+            </video>
+          </div>
+        </div>
+
+        <!-- Media Gallery -->
+        <div class="media-gallery" v-if="hasMultipleMedia">
+          <!-- Image Thumbnail -->
+          <div 
+            v-if="post.image" 
+            :class="['media-thumbnail', { active: currentMedia.url === post.image }]"
+            @click="setCurrentMedia('image', post.image)"
+          >
+            <img :src="post.image" alt="Post image" />
+          </div>
+          
+          <!-- Video Thumbnail -->
+          <div 
+            v-if="post.video" 
+            :class="['media-thumbnail', { active: currentMedia.url === post.video }]"
+            @click="setCurrentMedia('video', post.video)"
+          >
+            <!-- Use video element itself as thumbnail -->
+            <video 
+              :src="post.video" 
+              preload="metadata"
+            >
+              Your browser does not support video thumbnails.
+            </video>
+            <div class="video-indicator">
+              <i class="material-icons">play_circle</i>
+            </div>
+          </div>
         </div>
 
         <div class="post-info">
           <h1 class="post-title">{{ post.title }}</h1>
           <div class="price-tag" v-if="post.amount">
             ₱{{ formatAmount(post.amount) }}
-          </div>
-          
+    </div>
+
           <div class="description-section">
             <h3>Description</h3>
             <p class="description">{{ post.description }}</p>
@@ -218,6 +259,7 @@
 <script>
 import { fetchPostDetails, sendMessage } from '../authService.js';
 import Swal from 'sweetalert2';
+import { ref } from 'vue';
 
 export default {
   data() {
@@ -226,11 +268,29 @@ export default {
       error: null,
       isModalOpen: false,
       messageContent: '',
+      showMediaPreview: ref(false),
+      previewType: ref(null),
+      currentMedia: {
+        type: null,
+        url: null
+      },
     };
+  },
+  computed: {
+    hasMultipleMedia() {
+      return (this.post?.image && this.post?.video) || 
+             (Array.isArray(this.post?.images) && this.post?.images.length > 0);
+    }
   },
   async created() {
     try {
       this.post = await fetchPostDetails(this.$route.params.postId);
+      // Set initial media
+      if (this.post.video) {
+        this.setCurrentMedia('video', this.post.video);
+      } else if (this.post.image) {
+        this.setCurrentMedia('image', this.post.image);
+      }
     } catch (error) {
       Swal.fire({
         icon: 'error',
@@ -350,7 +410,10 @@ export default {
         const isLoggedIn = !!localStorage.getItem('token');
         this.$router.push(isLoggedIn ? '/dashboard' : '/');
       }
-    }
+    },
+    setCurrentMedia(type, url) {
+      this.currentMedia = { type, url };
+    },
   }
 };
 </script>
@@ -396,16 +459,100 @@ export default {
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 }
 
-.media-section {
+.main-media-section {
   width: 100%;
-  max-height: 500px;
+  height: 500px;
+  border-radius: 12px;
   overflow: hidden;
+  background: #000;
+  margin-bottom: 1rem;
 }
 
-.post-image, .post-video {
+.main-media {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.main-image,
+.main-video {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.media-gallery {
+  display: flex;
+  gap: 1rem;
+  overflow-x: auto;
+  padding: 0.5rem;
+  margin-top: 1rem;
+}
+
+.media-thumbnail {
+  width: 100px;
+  height: 100px;
+  border-radius: 8px;
+  overflow: hidden;
+  cursor: pointer;
+  position: relative;
+  border: 2px solid transparent;
+  transition: all 0.3s ease;
+}
+
+.media-thumbnail.active {
+  border-color: #2196f3;
+}
+
+.media-thumbnail img,
+.media-thumbnail video {
   width: 100%;
   height: 100%;
   object-fit: cover;
+}
+
+.media-thumbnail video {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  /* Prevent video from playing in thumbnail */
+  pointer-events: none;
+}
+
+.video-indicator {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  color: white;
+  background: rgba(0, 0, 0, 0.3);
+  border-radius: 50%;
+  padding: 0.5rem;
+  z-index: 2;
+}
+
+.video-indicator i {
+  font-size: 24px;
+}
+
+.media-thumbnail:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+/* Make sure thumbnails scroll smoothly on mobile */
+@media (max-width: 768px) {
+  .media-gallery {
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none; /* Firefox */
+    -ms-overflow-style: none; /* IE and Edge */
+  }
+
+  .media-gallery::-webkit-scrollbar {
+    display: none; /* Chrome, Safari, Opera */
+  }
 }
 
 .post-info {
@@ -741,5 +888,40 @@ export default {
 .portfolio-link:hover {
   text-decoration: underline;
 }
-</style>
+
+.video-container {
+  width: 100%;
+  max-height: 500px;
+  overflow: hidden;
+  border-radius: 8px;
+  background: #000;
+}
+
+.post-video {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+/* Optional: Add a media preview modal */
+.media-preview {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.9);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+}
+
+.media-preview img,
+.media-preview video {
+  max-width: 90%;
+  max-height: 90vh;
+  object-fit: contain;
+}
+  </style>
   
