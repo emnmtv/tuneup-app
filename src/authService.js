@@ -1,5 +1,5 @@
-const BASE_URL = "http://localhost:3200/auth"; // Base API URL
-// const BASE_URL = "http://192.168.0.104:3200/auth"; // Base API URL
+// const BASE_URL = "http://localhost:3200/auth"; // Base API URL
+const BASE_URL = "http://192.168.0.104:3200/auth"; // Base API URL
 
 // Add this function to parse JWT token
 export const getUserIdFromToken = () => {
@@ -441,5 +441,23 @@ export const initiatePayment = async (amount, description, remarks) => {
   }
 
   return await response.json();
+};
+
+// Add this function to handle logout
+export const logoutUser = () => {
+  try {
+    // Clear all auth-related items from localStorage
+    localStorage.removeItem('token');
+    localStorage.removeItem('userRole');
+    localStorage.removeItem('userId');
+    
+    // Clear any other stored data if needed
+    sessionStorage.removeItem('lastViewedPost');
+    
+    return true;
+  } catch (error) {
+    console.error('Logout error:', error);
+    return false;
+  }
 };
 

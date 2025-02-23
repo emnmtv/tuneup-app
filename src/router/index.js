@@ -10,9 +10,23 @@ import CreatePost from "@/components/CreatePost.vue";
 import Creatorpost from "@/components/Creatorpost.vue";
 import PostDetails from "@/components/PostDetails.vue";
 import Message from "@/components/Message.vue";
+import LandingPage from '../components/LandingPage.vue'
 
 const routes = [
-  { path: "/", component: LoginPage },
+  {
+    path: '/',
+    name: 'Landing',
+    component: LandingPage,
+    beforeEnter: (to, from, next) => {
+      // If user is authenticated, redirect to dashboard
+      if (localStorage.getItem('token')) {
+        next('/dashboard');
+      } else {
+        next();
+      }
+    }
+  },
+  { path: "/login", component: LoginPage },
   { path: "/dashboard", component: Dashboard },
   { path: "/profile", component: Profile },
   { path: "/settings", component: Settings },
@@ -30,6 +44,31 @@ const routes = [
 const router = createRouter({
   history: createWebHistory(),
   routes,
+});
+
+// Global navigation guard
+router.beforeEach((to, from, next) => {
+  const publicPages = ['/', '/login', '/register'];
+  const authRequired = !publicPages.includes(to.path);
+  const loggedIn = localStorage.getItem('token');
+
+  // Store the intended destination for post-login redirect
+  if (to.path.startsWith('/post/') && !loggedIn) {
+    sessionStorage.setItem('redirectAfterLogin', to.fullPath);
+    return next('/login');
+  }
+
+  // Redirect to dashboard if logged-in user tries to access login/register
+  if (loggedIn && ['/login', '/register'].includes(to.path)) {
+    return next('/dashboard');
+  }
+
+  // Handle auth-required pages
+  if (authRequired && !loggedIn) {
+    return next('/login');
+  }
+
+  next();
 });
 
 export default router;

@@ -1,7 +1,7 @@
 <template>
   <div class="app-container">
-    <!-- Show TopNav only if not on login or register page -->
-    <TopNav v-if="!isAuthRoute" />
+    <!-- Show TopNav only if authenticated and not on login/register pages -->
+    <TopNav v-if="!isAuthRoute && isAuthenticated" />
 
     <div class="content">
       <router-view />
@@ -23,8 +23,13 @@ export default {
     const isMobile = ref(window.innerWidth <= 768);
 
     // Routes where TopNav should not be shown
-    const authRoutes = ["/", "/register"];
+    const authRoutes = ["/login", "/register"];
     const isAuthRoute = computed(() => authRoutes.includes(route.path));
+    
+    // Check if user is authenticated
+    const isAuthenticated = computed(() => {
+      return !!localStorage.getItem('token');
+    });
 
     const handleResize = () => {
       isMobile.value = window.innerWidth <= 768;
@@ -36,6 +41,7 @@ export default {
     return {
       isMobile,
       isAuthRoute,
+      isAuthenticated,
     };
   },
 };

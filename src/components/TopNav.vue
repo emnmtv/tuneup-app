@@ -4,7 +4,12 @@
       <button class="toggle-btn" @click="toggleNav">
         <i class="material-icons">menu</i>
       </button>
-      <router-link to="/" class="brand">MyApp</router-link>
+      <router-link 
+        :to="isLoggedIn ? '/dashboard' : '/'" 
+        class="brand"
+      >
+        TuneUp
+      </router-link>
     </div>
 
     <div class="nav-links" v-if="userRole && navigationItems[userRole]">
@@ -40,7 +45,16 @@
 </template>
 
 <script>
+import { logoutUser } from '../authService';
+import { useRouter } from 'vue-router';
+import Swal from 'sweetalert2/dist/sweetalert2.js';
+import 'sweetalert2/dist/sweetalert2.min.css';
+
 export default {
+  setup() {
+    const router = useRouter();
+    return { router };
+  },
   data() {
     return {
       isCollapsed: false,
@@ -72,14 +86,42 @@ export default {
   created() {
     this.userRole = localStorage.getItem('userRole');
   },
+  computed: {
+    isLoggedIn() {
+      return !!localStorage.getItem('token');
+    }
+  },
   methods: {
     toggleNav() {
       this.isCollapsed = !this.isCollapsed;
     },
-    logout() {
-      localStorage.removeItem('jwtToken');
-      localStorage.removeItem('userRole');
-      this.$router.push('/');
+    async logout() {
+      try {
+        const success = logoutUser();
+        if (success) {
+          await Swal.fire({
+            title: 'Logged Out',
+            text: 'You have been successfully logged out',
+            icon: 'success',
+            timer: 1500,
+            showConfirmButton: false
+          });
+          
+          // Clear any stored data
+          this.userRole = null;
+          this.isCollapsed = false;
+          
+          // Redirect to landing page
+          this.router.push('/');
+        }
+      } catch (error) {
+        console.error('Logout failed:', error);
+        await Swal.fire({
+          title: 'Error',
+          text: 'Failed to logout. Please try again.',
+          icon: 'error'
+        });
+      }
     },
   },
 };

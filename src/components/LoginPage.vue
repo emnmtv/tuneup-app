@@ -20,16 +20,13 @@ const login = async () => {
 
     console.log("Stored token and role:", data.token, data.role); // Log stored data
 
-    // Redirect based on role
-    if (data.role === "user") {
-      console.log("Redirecting to user dashboard"); // Log redirect action
-      router.push("/dashboard");
-    } else if (data.role === "creator") {
-      console.log("Redirecting to creator dashboard"); // Log redirect action
-      router.push("/dashboard");
-    } else if (data.role === "admin") {
-      console.log("Redirecting to admin dashboard"); // Log redirect action
-      router.push("/admin-dashboard");
+    // Check for stored redirect path
+    const redirectPath = sessionStorage.getItem('redirectAfterLogin');
+    if (redirectPath) {
+      sessionStorage.removeItem('redirectAfterLogin');
+      router.push(redirectPath);
+    } else {
+      router.push('/dashboard');
     }
   } catch (error) {
     console.error("Login failed:", error); // Log error in case of failure
