@@ -416,7 +416,7 @@ export const fetchUsersWithChatHistory = async () => {
   return await response.json();
 };
 
-export const initiatePayment = async (amount, description, remarks) => {
+export const initiatePayment = async (amount, description, remarks, clientId) => {
   const token = localStorage.getItem('token');
 
   if (!token) {
@@ -432,7 +432,12 @@ export const initiatePayment = async (amount, description, remarks) => {
       'Content-Type': 'application/json',
       'Authorization': `Bearer ${token}`,
     },
-    body: JSON.stringify({ amount: amountInCents, description, remarks }),
+    body: JSON.stringify({ 
+      amount: amountInCents, 
+      description, 
+      remarks, 
+      clientId // Include clientId in the request body
+    }),
   });
 
   if (!response.ok) {
@@ -459,5 +464,28 @@ export const logoutUser = () => {
     console.error('Logout error:', error);
     return false;
   }
+};
+
+export const checkPaymentStatus = async (referenceNumber) => {
+  const token = localStorage.getItem('token');
+
+  if (!token) {
+    throw new Error('Token not found. Please log in.');
+  }
+
+  const response = await fetch(`${BASE_URL}/payment/status?referenceNumber=${referenceNumber}`, {
+    method: 'GET',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${token}`,
+    },
+  });
+
+  if (!response.ok) {
+    const errorResponse = await response.json();
+    throw new Error(errorResponse.error || 'Failed to check payment status');
+  }
+
+  return await response.json();
 };
 

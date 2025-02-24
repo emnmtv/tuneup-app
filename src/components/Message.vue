@@ -137,7 +137,7 @@
 </template>
 
 <script>
-import { sendMessage, fetchMessages, fetchUsersWithChatHistory, initiatePayment, getUserIdFromToken } from '../authService';
+import { sendMessage, fetchMessages, fetchUsersWithChatHistory, initiatePayment, getUserIdFromToken, checkPaymentStatus } from '../authService';
 import io from 'socket.io-client';
 
 export default {
@@ -270,7 +270,8 @@ export default {
         const paymentData = await initiatePayment(
           this.paymentAmount, 
           this.paymentDescription, 
-          this.paymentRemarks
+          this.paymentRemarks,
+          this.selectedReceiverId
         );
 
         // Create payment order message
@@ -360,7 +361,37 @@ export default {
         if (paymentDetails?.paymentUrl) {
           window.open(paymentDetails.paymentUrl, '_blank');
         }
+
+        // Check payment status
+        this.checkPaymentStatus(paymentDetails.referenceNumber);
       }
+    },
+    async checkPaymentStatus(referenceNumber) {
+      let attempts = 0;
+      const maxAttempts = 5;
+
+      while (attempts < maxAttempts) {
+        try {
+          const statusData = await checkPaymentStatus(referenceNumber);
+          console.log(`Payment status for ${referenceNumber}: ${statusData.status}`);
+
+          // If the payment is paid, break the loop
+          if (statusData.status === 'paid') {
+            alert('Payment has been completed.');
+            return; // Exit the function if payment is completed
+          }
+        } catch (error) {
+          console.error('Error checking payment status:', error);
+        }
+
+        attempts++;
+        // Wait for 30 seconds before the next check
+        await new Promise(resolve => setTimeout(resolve, 30 * 1000));
+      }
+
+      // If still unpaid after 5 attempts, revert to checking every hour
+      console.log(`Payment for ${referenceNumber} is still unpaid after ${maxAttempts} attempts. Reverting to hourly checks.`);
+      // You can implement a mechanism to check every hour here if needed
     },
     formatAmount(amount) {
       return Number(amount).toLocaleString('en-PH', {
