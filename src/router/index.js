@@ -11,6 +11,11 @@ import Creatorpost from "@/components/Creatorpost.vue";
 import PostDetails from "@/components/PostDetails.vue";
 import Message from "@/components/Message.vue";
 import LandingPage from '../components/LandingPage.vue'
+import UserPayments from "../components/UserPayments.vue";
+import ClientPayments from "../components/ClientPayments.vue";
+
+import ViewClientPaymentDetails from '../components/ViewClientPaymentDetails.vue'; // Import the client payment details component
+import ViewUserPaymentDetails from '../components/ViewUserPaymentDetails.vue'; // Import the user payment details component
 
 const routes = [
   {
@@ -37,8 +42,19 @@ const routes = [
   { path: "/creatorpost", component: Creatorpost}, // Register Route
   { path: '/post/:postId', name: 'PostDetails', component: PostDetails },
  {path: '/messages', component: Message},
+ { path: "/user-payments", component: UserPayments },
+ { path: "/client-payments", component: ClientPayments },
 
-
+ {
+   path: '/client/payment/:referenceNumber', // Route for client payment details
+   name: 'ViewClientPaymentDetails',
+   component: ViewClientPaymentDetails,
+ },
+ {
+   path: '/user/payment/:referenceNumber', // Route for user payment details
+   name: 'ViewUserPaymentDetails',
+   component: ViewUserPaymentDetails,
+ },
 ];
 
 const router = createRouter({

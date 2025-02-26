@@ -254,7 +254,7 @@ export default {
         { 
           id: 'drummer',
           name: 'Drummers', 
-          icon: 'drums',
+        
           subcategories: [
             'Rock Drummer',
             'Jazz Drummer',

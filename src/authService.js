@@ -1,6 +1,9 @@
 const BASE_URL = "http://localhost:3200/auth"; // Base API URL
 // const BASE_URL = "http://192.168.0.104:3200/auth"; // Base API URL
 
+// New base URL for images and videos
+const MEDIA_BASE_URL = "http://localhost:3200/uploads"; // Base URL for media files (images and videos)
+// const MEDIA_BASE_URL = "http://192.168.0.104:3200/uploads"; 
 // Add this function to parse JWT token
 export const getUserIdFromToken = () => {
   const token = localStorage.getItem('token');
@@ -245,7 +248,18 @@ export const fetchUserProfileAndPosts = async () => {
     }
 
     const data = await response.json();
-    return data;
+
+    // Construct full URLs for images and videos
+    const userWithMedia = {
+      ...data,
+      posts: data.posts.map(post => ({
+        ...post,
+        image: post.image ? `${MEDIA_BASE_URL}/${post.image}` : null,
+        video: post.video ? `${MEDIA_BASE_URL}/${post.video}` : null,
+      })),
+    };
+
+    return userWithMedia;
   } catch (error) {
     console.error('Fetch error:', error);
     return null;
@@ -327,7 +341,15 @@ export const fetchAllPosts = async () => {
       throw new Error('Failed to fetch posts');
     }
     const data = await response.json();
-    return data;
+
+    // Construct full URLs for images and videos
+    const postsWithMedia = data.map(post => ({
+      ...post,
+      image: post.image ? `${MEDIA_BASE_URL}/${post.image}` : null,
+      video: post.video ? `${MEDIA_BASE_URL}/${post.video}` : null,
+    }));
+
+    return postsWithMedia;
   } catch (error) {
     console.error("Error fetching posts:", error);
     throw error; // Propagate the error to be handled in the component
@@ -341,7 +363,13 @@ export const fetchPostDetails = async (postId) => {
       throw new Error('Failed to fetch post details');
     }
     const data = await response.json();
-    return data;
+
+    // Construct full URLs for images and videos
+    return {
+      ...data,
+      image: data.image ? `${MEDIA_BASE_URL}/${data.image}` : null,
+      video: data.video ? `${MEDIA_BASE_URL}/${data.video}` : null,
+    };
   } catch (error) {
     console.error("Error fetching post details:", error);
     throw error;
@@ -484,6 +512,108 @@ export const checkPaymentStatus = async (referenceNumber) => {
   if (!response.ok) {
     const errorResponse = await response.json();
     throw new Error(errorResponse.error || 'Failed to check payment status');
+  }
+
+  return await response.json();
+};
+
+// Function to fetch payments for the authenticated user
+export const fetchUserPayments = async () => {
+  const token = localStorage.getItem('token');
+
+  if (!token) {
+    throw new Error('Token not found. Please log in.');
+  }
+
+  const response = await fetch(`${BASE_URL}/payments`, {
+    method: 'GET',
+    headers: {
+      'Authorization': `Bearer ${token}`,
+    },
+  });
+
+  if (!response.ok) {
+    const errorResponse = await response.json();
+    throw new Error(errorResponse.error || 'Failed to fetch user payments');
+  }
+
+  return await response.json();
+};
+
+// Function to update the order status of a payment from the user side
+export const updateUserOrderStatus = async (referenceNumber, newStatus) => {
+  const token = localStorage.getItem('token');
+
+  if (!token) {
+    throw new Error('Token not found. Please log in.');
+  }
+
+  const response = await fetch(`${BASE_URL}/payment/status`, {
+    method: 'PUT',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${token}`,
+    },
+    body: JSON.stringify({
+      referenceNumber,
+      newStatus,
+    }),
+  });
+
+  if (!response.ok) {
+    const errorResponse = await response.json();
+    throw new Error(errorResponse.error || 'Failed to update order status');
+  }
+
+  return await response.json();
+};
+
+// Function to fetch payments for the authenticated client
+export const fetchClientPayments = async () => {
+  const token = localStorage.getItem('token');
+
+  if (!token) {
+    throw new Error('Token not found. Please log in.');
+  }
+
+  const response = await fetch(`${BASE_URL}/client/payments`, {
+    method: 'GET',
+    headers: {
+      'Authorization': `Bearer ${token}`,
+    },
+  });
+
+  if (!response.ok) {
+    const errorResponse = await response.json();
+    throw new Error(errorResponse.error || 'Failed to fetch client payments');
+  }
+
+  return await response.json();
+};
+
+// Function to update the order status of a payment from the client side
+export const updateClientOrderStatus = async (referenceNumber, newStatus) => {
+  const token = localStorage.getItem('token');
+
+  if (!token) {
+    throw new Error('Token not found. Please log in.');
+  }
+
+  const response = await fetch(`${BASE_URL}/client/payment/status`, {
+    method: 'PUT',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${token}`,
+    },
+    body: JSON.stringify({
+      referenceNumber,
+      newStatus,
+    }),
+  });
+
+  if (!response.ok) {
+    const errorResponse = await response.json();
+    throw new Error(errorResponse.error || 'Failed to update order status');
   }
 
   return await response.json();

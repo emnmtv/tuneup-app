@@ -73,12 +73,13 @@ export default {
           { name: 'Create Post', path: '/createpost', icon: 'add_circle' },
           { name: 'Creator Posts', path: '/creatorpost', icon: 'list' },
           { name: 'Messages', path: '/messages', icon: 'message' },
+          { name: 'Client Orders', path: '/user-payments', icon: 'payment' },
         ],
         user: [
         { name: 'Dashboard', path: '/dashboard', icon: 'dashboard' },
           { name: 'Upgrade to Creator', path: '/upgrade', icon: 'arrow_upward' },
           { name: 'Profile', path: '/profile', icon: 'person' },
-      
+          { name: 'Orders', path: '/client-payments', icon: 'payment' },
           { name: 'Messages', path: '/messages', icon: 'message' },
         ],
       },
