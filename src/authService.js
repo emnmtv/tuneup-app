@@ -619,3 +619,59 @@ export const updateClientOrderStatus = async (referenceNumber, newStatus) => {
   return await response.json();
 };
 
+export const submitRating = async (userId, paymentId, rating, review) => {
+  const token = localStorage.getItem('token');
+  
+  try {
+    const response = await fetch(`${BASE_URL}/rate`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+      },
+      body: JSON.stringify({
+        userId,
+        paymentId,
+        rating,
+        review
+      })
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.error || 'Failed to submit rating');
+    }
+
+    return await response.json();
+  } catch (error) {
+    throw new Error(error.message || 'Failed to submit rating');
+  }
+};
+
+export const fetchCreatorRatings = async () => {
+  const token = localStorage.getItem('token');
+  
+  if (!token) {
+    throw new Error('No authentication token found');
+  }
+
+  try {
+    const response = await fetch(`${BASE_URL}/ratings`, {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      }
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.error || 'Failed to fetch ratings');
+    }
+
+    return await response.json();
+  } catch (error) {
+    throw new Error(`Failed to fetch ratings: ${error.message}`);
+  }
+};
+

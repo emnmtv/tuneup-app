@@ -74,6 +74,7 @@ export default {
           { name: 'Creator Posts', path: '/creatorpost', icon: 'list' },
           { name: 'Messages', path: '/messages', icon: 'message' },
           { name: 'Client Orders', path: '/user-payments', icon: 'payment' },
+          { name: 'Creator Dashboard', path: '/creator-dashboard', icon: 'dashboard' },
         ],
         user: [
         { name: 'Dashboard', path: '/dashboard', icon: 'dashboard' },

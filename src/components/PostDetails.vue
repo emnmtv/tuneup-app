@@ -216,6 +216,58 @@
             <span>Updated {{ formatTimeAgo(post.updatedAt) }}</span>
           </div>
         </div>
+
+        <!-- Add this section for creator ratings -->
+        <div class="creator-ratings" v-if="creatorRatings">
+          <h3>Creator Ratings</h3>
+          <div class="rating-stats">
+            <div class="average-rating">
+              <div class="rating-value">{{ creatorRatings.stats.average.toFixed(1) }}</div>
+              <div class="stars">
+                <span 
+                  v-for="star in 5" 
+                  :key="star"
+                  class="material-icons"
+                  :class="{ filled: star <= Math.round(creatorRatings.stats.average) }"
+                >
+                  star
+                </span>
+              </div>
+              <div class="total-ratings">{{ creatorRatings.stats.total }} ratings</div>
+            </div>
+          </div>
+
+          <!-- Recent Reviews -->
+          <div class="recent-reviews">
+            <h4>Recent Reviews</h4>
+            <div v-if="creatorRatings.ratings.length > 0" class="reviews-list">
+              <div v-for="rating in creatorRatings.ratings.slice(0, 5)" :key="rating.id" class="review-item">
+                <div class="review-header">
+                  <div class="stars">
+                    <span 
+                      v-for="star in 5" 
+                      :key="star"
+                      class="material-icons"
+                      :class="{ filled: star <= rating.rating }"
+                    >
+                      star
+                    </span>
+                  </div>
+                  <div class="review-date">{{ formatDate(rating.createdAt) }}</div>
+                </div>
+                <div class="reviewer">{{ rating.client.firstName }} {{ rating.client.lastName }}</div>
+                <div class="review-text" v-if="rating.review">{{ rating.review }}</div>
+                <div class="service-info">
+                  <span class="material-icons">check_circle</span>
+                  {{ rating.payment.description }}
+                </div>
+              </div>
+            </div>
+            <div v-else class="no-reviews">
+              No reviews yet
+            </div>
+          </div>
+        </div>
       </div>
     </div>
 
@@ -257,7 +309,7 @@
 </template>
 
 <script>
-import { fetchPostDetails, sendMessage } from '../authService.js';
+import { fetchPostDetails, sendMessage, fetchCreatorRatings } from '../authService.js';
 import Swal from 'sweetalert2';
 import { ref } from 'vue';
 
@@ -274,6 +326,7 @@ export default {
         type: null,
         url: null
       },
+      creatorRatings: null
     };
   },
   computed: {
@@ -291,6 +344,7 @@ export default {
       } else if (this.post.image) {
         this.setCurrentMedia('image', this.post.image);
       }
+      await this.fetchRatings();
     } catch (error) {
       Swal.fire({
         icon: 'error',
@@ -414,6 +468,25 @@ export default {
     setCurrentMedia(type, url) {
       this.currentMedia = { type, url };
     },
+    async fetchRatings() {
+      try {
+        if (this.post && this.post.userId) {
+          const ratings = await fetchCreatorRatings(this.post.userId);
+          this.creatorRatings = ratings;
+        }
+      } catch (error) {
+        console.error('Error fetching ratings:', error);
+      }
+    },
+    formatDate(dateString) {
+      return new Date(dateString).toLocaleDateString('en-US', {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+      });
+    }
   }
 };
 </script>
@@ -923,5 +996,100 @@ export default {
   max-height: 90vh;
   object-fit: contain;
 }
-  </style>
+
+.creator-ratings {
+  background: white;
+  border-radius: 12px;
+  padding: 1.5rem;
+  margin-top: 2rem;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+}
+
+.rating-stats {
+  display: flex;
+  justify-content: center;
+  padding: 1.5rem 0;
+}
+
+.average-rating {
+  text-align: center;
+}
+
+.rating-value {
+  font-size: 3rem;
+  font-weight: bold;
+  color: #2c3e50;
+}
+
+.stars {
+  color: #ffd700;
+  margin: 0.5rem 0;
+}
+
+.stars .material-icons {
+  font-size: 1.25rem;
+}
+
+.stars .material-icons.filled {
+  color: #ffd700;
+}
+
+.total-ratings {
+  color: #666;
+  font-size: 0.9rem;
+}
+
+.recent-reviews {
+  margin-top: 2rem;
+}
+
+.reviews-list {
+  margin-top: 1rem;
+}
+
+.review-item {
+  padding: 1rem;
+  border-bottom: 1px solid #eee;
+}
+
+.review-item:last-child {
+  border-bottom: none;
+}
+
+.review-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.review-date {
+  color: #666;
+  font-size: 0.9rem;
+}
+
+.reviewer {
+  font-weight: 500;
+  margin: 0.5rem 0;
+}
+
+.review-text {
+  color: #2c3e50;
+  margin: 0.5rem 0;
+  font-style: italic;
+}
+
+.service-info {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: #28a745;
+  font-size: 0.9rem;
+}
+
+.no-reviews {
+  text-align: center;
+  color: #666;
+  padding: 2rem;
+}
+</style>
   

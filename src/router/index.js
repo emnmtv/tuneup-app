@@ -16,6 +16,7 @@ import ClientPayments from "../components/ClientPayments.vue";
 
 import ViewClientPaymentDetails from '../components/ViewClientPaymentDetails.vue'; // Import the client payment details component
 import ViewUserPaymentDetails from '../components/ViewUserPaymentDetails.vue'; // Import the user payment details component
+import CreatorDashboard from '../components/CreatorDashboard.vue'; // Import the creator dashboard component
 
 const routes = [
   {
@@ -55,6 +56,8 @@ const routes = [
    name: 'ViewUserPaymentDetails',
    component: ViewUserPaymentDetails,
  },
+{path:"/creator-dashboard", component: CreatorDashboard},
+
 ];
 
 const router = createRouter({
