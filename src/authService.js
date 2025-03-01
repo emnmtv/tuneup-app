@@ -342,17 +342,19 @@ export const fetchAllPosts = async () => {
     }
     const data = await response.json();
 
-    // Construct full URLs for images and videos
-    const postsWithMedia = data.map(post => ({
-      ...post,
-      image: post.image ? `${MEDIA_BASE_URL}/${post.image}` : null,
-      video: post.video ? `${MEDIA_BASE_URL}/${post.video}` : null,
-    }));
+    // Filter out rejected posts and add media URLs
+    const postsWithMedia = data
+      .filter(post => post.status !== 'rejected')
+      .map(post => ({
+        ...post,
+        image: post.image ? `${MEDIA_BASE_URL}/${post.image}` : null,
+        video: post.video ? `${MEDIA_BASE_URL}/${post.video}` : null,
+      }));
 
     return postsWithMedia;
   } catch (error) {
     console.error("Error fetching posts:", error);
-    throw error; // Propagate the error to be handled in the component
+    throw error;
   }
 };
 
@@ -672,6 +674,132 @@ export const fetchCreatorRatings = async () => {
     return await response.json();
   } catch (error) {
     throw new Error(`Failed to fetch ratings: ${error.message}`);
+  }
+};
+
+// Function to approve/reject post (admin only)
+export const updatePostStatus = async (postId, status) => {
+  const token = localStorage.getItem('token');
+  
+  if (!token) {
+    throw new Error('No authentication token found');
+  }
+
+  try {
+    const response = await fetch(`${BASE_URL}/post/status`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+      },
+      body: JSON.stringify({
+        postId,
+        status
+      })
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.error || 'Failed to update post status');
+    }
+
+    return await response.json();
+  } catch (error) {
+    throw new Error(`Failed to update post status: ${error.message}`);
+  }
+};
+
+// Function to delete post (admin only)
+export const deletePostAdmin = async (postId) => {
+  const token = localStorage.getItem('token');
+  
+  if (!token) {
+    throw new Error('No authentication token found');
+  }
+
+  try {
+    const response = await fetch(`${BASE_URL}/post/admin`, {
+      method: 'DELETE',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+      },
+      body: JSON.stringify({ postId })
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.error || 'Failed to delete post');
+    }
+
+    return await response.json();
+  } catch (error) {
+    throw new Error(`Failed to delete post: ${error.message}`);
+  }
+};
+
+// New function for admin to fetch ALL posts including rejected ones
+export const fetchAllPostsAdmin = async () => {
+  const token = localStorage.getItem('token');
+  
+  if (!token) {
+    throw new Error('No authentication token found');
+  }
+
+  try {
+    const response = await fetch(`${BASE_URL}/admin/posts`, {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      }
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.error || 'Failed to fetch posts');
+    }
+
+    const data = await response.json();
+    
+    // Add media URLs to all posts
+    const postsWithMedia = data.map(post => ({
+      ...post,
+      image: post.image ? `${MEDIA_BASE_URL}/${post.image}` : null,
+      video: post.video ? `${MEDIA_BASE_URL}/${post.video}` : null,
+    }));
+
+    return postsWithMedia;
+  } catch (error) {
+    throw new Error(`Failed to fetch posts: ${error.message}`);
+  }
+};
+
+// Function to fetch all users (admin only)
+export const fetchAllUsers = async () => {
+  const token = localStorage.getItem('token');
+  
+  if (!token) {
+    throw new Error('No authentication token found');
+  }
+
+  try {
+    const response = await fetch(`${BASE_URL}/admin/users`, {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      }
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.error || 'Failed to fetch users');
+    }
+
+    return await response.json();
+  } catch (error) {
+    throw new Error(`Failed to fetch users: ${error.message}`);
   }
 };
 

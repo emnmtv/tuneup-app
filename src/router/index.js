@@ -13,10 +13,11 @@ import Message from "@/components/Message.vue";
 import LandingPage from '../components/LandingPage.vue'
 import UserPayments from "../components/UserPayments.vue";
 import ClientPayments from "../components/ClientPayments.vue";
-
+import AdminDashboard from '../components/AdminDashboard.vue';
 import ViewClientPaymentDetails from '../components/ViewClientPaymentDetails.vue'; // Import the client payment details component
 import ViewUserPaymentDetails from '../components/ViewUserPaymentDetails.vue'; // Import the user payment details component
 import CreatorDashboard from '../components/CreatorDashboard.vue'; // Import the creator dashboard component
+import ManageUsers from '../components/ManageUsers.vue'
 
 const routes = [
   {
@@ -57,9 +58,22 @@ const routes = [
    component: ViewUserPaymentDetails,
  },
 {path:"/creator-dashboard", component: CreatorDashboard},
-
+{
+  path: '/admin-dashboard',
+  name: 'AdminDashboard',
+  component: AdminDashboard,
+  meta: { 
+    requiresAuth: true,
+    requiresAdmin: true 
+  }
+},
+{
+  path: '/admin/users',
+  name: 'ManageUsers',
+  component: ManageUsers,
+  meta: { requiresAuth: true, requiresAdmin: true }
+},
 ];
-
 const router = createRouter({
   history: createWebHistory(),
   routes,
