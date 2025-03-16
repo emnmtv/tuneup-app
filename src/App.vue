@@ -43,6 +43,12 @@ export default {
     onMounted(() => {
       window.addEventListener('resize', handleResize);
       isAuthenticated.value = !!localStorage.getItem('token');
+      
+      // Apply global styles to fix margin issues
+      document.body.style.margin = '0';
+      document.body.style.padding = '0';
+      document.documentElement.style.margin = '0';
+      document.documentElement.style.padding = '0';
     });
     
     onUnmounted(() => window.removeEventListener('resize', handleResize));
@@ -57,23 +63,41 @@ export default {
 };
 </script>
 
+<style>
+/* Global styles to fix margin issues */
+* {
+  box-sizing: border-box;
+}
+
+html, body {
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  height: 100%;
+  overflow-x: hidden;
+}
+</style>
+
 <style scoped>
 /* Ensure the app takes the full height of the viewport */
 .app-container {
   display: flex;
   flex-direction: column;
-  height: 100vh;
+  min-height: 100vh;
   margin: 0;
   padding: 0;
-  overflow: hidden; /* Prevent unnecessary scrolling */
+  background-color: #f0f2f5; /* Facebook-like background color */
+  width: 100%;
+  overflow-x: hidden; /* Prevent horizontal scroll */
 }
 
 .content {
   flex-grow: 1;
-  padding: 20px;
+  padding: 0;
+  margin: 0;
+  width: 100%;
   overflow-y: auto; /* Allow scroll only if content exceeds viewport */
   height: 100%;
   box-sizing: border-box;
-  margin: 0;
 }
 </style>

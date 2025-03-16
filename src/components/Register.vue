@@ -15,6 +15,7 @@ const form = ref({
 const verificationCode = ref("");
 const showModal = ref(false);
 const loading = ref(false);
+const showPassword = ref(false);
 
 const images = [
   require('@/assets/slash.jpg'),
@@ -91,222 +92,380 @@ const handleVerify = async () => {
 </script>
 
 <template>
-  <div class="register-container">
-    <div class="header">
-      <h2>welcome to tuneup </h2>
-      <p>Hiring musicians has never been easier</p>
-    </div>
+  <div class="auth-container">
+    <div class="auth-content">
+      <div class="auth-header">
+        <h1>Create Account</h1>
+        <p>Join the TuneUp community today</p>
+      </div>
 
-    <form @submit.prevent="handleRegister">
-      <label>Email:</label>
-      <input v-model="form.email" type="email" required />
+      <form @submit.prevent="handleRegister" class="auth-form">
+        <div class="form-group">
+          <label>
+            <i class="material-icons">email</i>
+            Email
+          </label>
+          <input 
+            v-model="form.email" 
+            type="email" 
+            required 
+            placeholder="Enter your email"
+          />
+        </div>
 
-      <label>Password:</label>
-      <input v-model="form.password" type="password" required />
+        <div class="form-group">
+          <label>
+            <i class="material-icons">lock</i>
+            Password
+          </label>
+          <div class="password-input">
+            <input 
+              v-model="form.password" 
+              :type="showPassword ? 'text' : 'password'" 
+              required 
+              placeholder="Enter your password"
+            />
+            <i 
+              class="material-icons toggle-password"
+              @click="showPassword = !showPassword"
+            >
+              {{ showPassword ? 'visibility_off' : 'visibility' }}
+            </i>
+          </div>
+        </div>
 
-      <label>First Name:</label>
-      <input v-model="form.firstName" type="text" />
+        <div class="form-row">
+          <div class="form-group">
+            <label>
+              <i class="material-icons">person</i>
+              First Name
+            </label>
+            <input 
+              v-model="form.firstName" 
+              type="text" 
+              required 
+              placeholder="First name"
+            />
+          </div>
 
-      <label>Last Name:</label>
-      <input v-model="form.lastName" type="text" />
+          <div class="form-group">
+            <label>
+              <i class="material-icons">person</i>
+              Last Name
+            </label>
+            <input 
+              v-model="form.lastName" 
+              type="text" 
+              required 
+              placeholder="Last name"
+            />
+          </div>
+        </div>
 
-      <label>Phone Number:</label>
-      <input v-model="form.phoneNumber" type="tel" />
+        <div class="form-row">
+          <div class="form-group">
+            <label>
+              <i class="material-icons">phone</i>
+              Phone Number
+            </label>
+            <input 
+              v-model="form.phoneNumber" 
+              type="tel" 
+              placeholder="Phone number"
+            />
+          </div>
 
-      <label>Date of Birth:</label>
-      <input v-model="form.dateOfBirth" type="date" required />
+          <div class="form-group">
+            <label>
+              <i class="material-icons">cake</i>
+              Date of Birth
+            </label>
+            <input 
+              v-model="form.dateOfBirth" 
+              type="date" 
+              required
+            />
+          </div>
+        </div>
 
-      <button type="submit" :disabled="loading">
-        {{ loading ? "Registering..." : "Register" }}
-      </button>
-    </form>
+        <button type="submit" class="submit-btn" :disabled="loading">
+          <span v-if="!loading">Create Account</span>
+          <div v-else class="loader"></div>
+        </button>
+      </form>
 
-    <!-- Verification Code Modal -->
-    <div v-if="showModal" class="modal">
-      <div class="modal-content">
-        <h3>Enter Verification Code</h3>
-        <input v-model="verificationCode" type="text" placeholder="Enter code" />
-        <button @click="handleVerify">Verify</button>
-        <button @click="showModal = false" class="cancel">Cancel</button>
+      <div class="auth-footer">
+        <p>Already have an account?</p>
+        <button @click="$router.push('/login')" class="switch-btn">
+          Sign In
+        </button>
       </div>
     </div>
-  </div>
-  <div class="slideshow">
-    <img v-for="(image, index) in images" :key="index" :src="image" :class="{ active: currentIndex === index }" />
+
+    <div class="auth-banner">
+      <div class="banner-content">
+        <h2>TuneUp</h2>
+        <p>Where talent meets opportunity</p>
+      </div>
+      <div class="banner-overlay"></div>
+      <img :src="images[currentIndex]" alt="Music" class="banner-image" />
+    </div>
+
+    <!-- Verification Modal -->
+    <div v-if="showModal" class="modal-overlay">
+      <div class="modal-content">
+        <h3>Verify Your Email</h3>
+        <p>Please enter the verification code sent to your email</p>
+        <div class="verification-input">
+          <input 
+            v-model="verificationCode" 
+            type="text" 
+            placeholder="Enter code"
+            maxlength="6"
+          />
+        </div>
+        <div class="modal-actions">
+          <button @click="handleVerify" class="verify-btn" :disabled="loading">
+            <span v-if="!loading">Verify</span>
+            <div v-else class="loader"></div>
+          </button>
+          <button @click="showModal = false" class="cancel-btn">
+            Cancel
+          </button>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
 <style scoped>
-body, html {
-  margin: 0;
-  padding: 0;
-  height: 100%;
-}
-
-.register-container {
-  position: absolute; /* Change to absolute for positioning */
-  top: 50%; /* Center vertically */
-  right: 30%; /* Position to the right */
-  transform: translateY(-50%); /* Adjust for vertical centering */
-  z-index: 2; /* Ensure form is above the slideshow */
-  width: 400px; /* Fixed width */
-  height: 600px; /* Increased height */
-  padding: 20px; /* Padding for spacing */
-  background: rgba(255, 255, 255, 1); /* Change to fully opaque background */
-  border-radius: 15px; /* Rounded corners */
-  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2); /* Deeper shadow for depth */
-  font-family: 'Arial', sans-serif; /* Modern font */
-  overflow: hidden; /* Remove scrolling */
+.auth-container {
   display: flex;
-  flex-direction: column; /* Stack elements vertically */
-  justify-content: space-between; /* Space out elements */
+  min-height: 100vh;
+  background: #f8f9fa;
 }
 
-h2 {
-  text-align: center; /* Center the heading */
-  color: #333; /* Darker text color */
+.auth-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: 2rem;
+  max-width: 600px;
+  margin: 0 auto;
 }
 
-label {
-  font-weight: bold; /* Bold labels */
-  margin-top: 10px; /* Spacing above labels */
+.auth-header {
+  text-align: center;
+  margin-bottom: 2rem;
 }
 
-input {
-  display: block;
-  width: 100%;
-  padding: 10px; /* Padding inside the input */
-  margin-bottom: 15px; /* Space between inputs */
-  border: 1px solid #ccc; /* Light border */
-  border-radius: 5px; /* Rounded input corners */
-  transition: border-color 0.3s; /* Smooth transition for focus */
-  box-sizing: border-box; /* Include padding and border in the element's total width and height */
+.auth-header h1 {
+  font-size: 2.5rem;
+  color: #333;
+  margin-bottom: 0.5rem;
 }
 
-input:focus {
-  border-color: #3498db; /* Highlight border on focus */
-  outline: none; /* Remove default outline */
+.auth-header p {
+  color: #666;
+  font-size: 1.1rem;
 }
 
-button {
-  background: #3498db; /* Button color */
-  color: white;
-  border: none;
-  padding: 12px; /* Increased padding for buttons */
-  border-radius: 5px; /* Rounded button corners */
+.auth-form {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.form-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.form-group label {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: #555;
+  font-weight: 500;
+}
+
+.form-group input {
+  padding: 1rem;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  font-size: 1rem;
+  transition: all 0.3s;
+}
+
+.form-group input:focus {
+  border-color: #2196f3;
+  box-shadow: 0 0 0 3px rgba(33, 150, 243, 0.1);
+  outline: none;
+}
+
+.password-input {
+  position: relative;
+}
+
+.toggle-password {
+  position: absolute;
+  right: 1rem;
+  top: 50%;
+  transform: translateY(-50%);
   cursor: pointer;
-  width: 100%; /* Full width button */
-  transition: background 0.3s; /* Smooth transition for hover */
+  color: #666;
 }
 
-button:hover {
-  background: #2980b9; /* Darker button on hover */
+.submit-btn {
+  background: #2196f3;
+  color: white;
+  padding: 1rem;
+  border: none;
+  border-radius: 8px;
+  font-size: 1.1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s;
 }
 
-.message {
-  color: green;
-  font-weight: bold;
-  text-align: center; /* Center message */
+.submit-btn:hover {
+  background: #1976d2;
 }
 
 /* Modal Styles */
-.modal {
+.modal-overlay {
   position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
+  inset: 0;
   background: rgba(0, 0, 0, 0.5);
   display: flex;
   align-items: center;
   justify-content: center;
+  z-index: 1000;
 }
 
 .modal-content {
   background: white;
-  padding: 20px;
-  border-radius: 10px;
+  padding: 2rem;
+  border-radius: 12px;
+  width: 90%;
+  max-width: 400px;
   text-align: center;
 }
 
-.cancel {
-  background: #e74c3c;
+.verification-input {
+  margin: 1.5rem 0;
 }
 
-.slideshow {
-  position: fixed;
-  top: 0;
-  left: 0;
+.verification-input input {
   width: 100%;
-  height: 100%;
-  overflow: hidden;
-  z-index: 1; /* Behind the form */
+  padding: 1rem;
+  font-size: 1.5rem;
+  text-align: center;
+  letter-spacing: 0.5rem;
+  border: 2px solid #ddd;
+  border-radius: 8px;
 }
 
-.slideshow img {
+.modal-actions {
+  display: flex;
+  gap: 1rem;
+  margin-top: 1.5rem;
+}
+
+.verify-btn, .cancel-btn {
+  flex: 1;
+  padding: 0.75rem;
+  border: none;
+  border-radius: 8px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s;
+}
+
+.verify-btn {
+  background: #2196f3;
+  color: white;
+}
+
+.cancel-btn {
+  background: #f5f5f5;
+  color: #666;
+}
+
+/* Banner Styles */
+.auth-banner {
+  flex: 1;
+  position: relative;
+  display: none;
+  overflow: hidden;
+}
+
+.banner-image {
   position: absolute;
+  inset: 0;
   width: 100%;
   height: 100%;
   object-fit: cover;
-  opacity: 0;
-  transition: opacity 1s ease-in-out;
+  transition: opacity 1s;
 }
 
-.slideshow img.active {
-  opacity: 1;
+.banner-overlay {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(45deg, rgba(33, 150, 243, 0.8), rgba(21, 101, 192, 0.8));
+  z-index: 1;
 }
 
-/* Media Queries for Mobile View */
-@media (max-width: 600px) {
-  .register-container {
-    right: 5%; /* Adjust position for mobile */
-    left: 5%; /* Ensure it doesn't overflow */
-    width: auto; /* Auto width to fit content */
-    height: auto; /* Auto height to fit content */
-    padding: 20px; /* Adjust padding for better spacing */
-    box-shadow: none; /* Remove shadow for a cleaner look */
-  }
+.banner-content {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  text-align: center;
+  color: white;
+  z-index: 2;
+}
 
-  h2 {
-    font-size: 1.8em; /* Increase heading size for better visibility */
-    margin-bottom: 10px; /* Add space below heading */
-  }
-
-  p {
-    font-size: 1em; /* Adjust paragraph size */
-    margin-bottom: 15px; /* Space below paragraph */
-  }
-
-  label {
-    font-size: 1em; /* Adjust label size */
-    margin-top: 15px; /* More space above labels */
-  }
-
-  input {
-    padding: 12px; /* Increase input padding for comfort */
-    margin-bottom: 15px; /* Space between inputs */
-    border: 1px solid rgba(255, 255, 255, 0.5); /* Light border with transparency */
-    border-radius: 8px; /* Slightly larger rounded corners */
-  }
-
-  button {
-    padding: 15px; /* Increase button padding for easier tapping */
-    font-size: 1em; /* Adjust button font size */
+@media (min-width: 1024px) {
+  .auth-banner {
+    display: block;
   }
 }
 
-.header {
-  text-align: center; /* Center the text */
-  margin-bottom: 20px; /* Space below the header */
+@media (max-width: 768px) {
+  .auth-content {
+    padding: 1rem;
+  }
+
+  .form-row {
+    grid-template-columns: 1fr;
+  }
+
+  .modal-content {
+    margin: 1rem;
+  }
 }
 
-.header h2 {
-  font-size: 2em; /* Larger font size for the heading */
-  color: #333; /* Darker color for the heading */
+.loader {
+  width: 20px;
+  height: 20px;
+  border: 2px solid #fff;
+  border-bottom-color: transparent;
+  border-radius: 50%;
+  animation: rotate 1s linear infinite;
+  margin: 0 auto;
 }
 
-.header p {
-  font-size: 1.2em; /* Slightly larger font size for the paragraph */
-  color: #666; /* Lighter color for the paragraph */
+@keyframes rotate {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
 }
 </style>

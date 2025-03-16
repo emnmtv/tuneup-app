@@ -1,51 +1,144 @@
 <template>
   <div class="topnav">
     <div class="nav-left">
-      <button class="toggle-btn" @click="toggleNav">
-        <i class="material-icons">menu</i>
-      </button>
-      <router-link 
-        :to="isLoggedIn ? '/dashboard' : '/'" 
-        class="brand"
-      >
-        TuneUp
+      <router-link :to="isLoggedIn ? '/dashboard' : '/'" class="brand">
+        <img src="@/assets/logo.png" alt="TuneUp" class="brand-logo" />
       </router-link>
+      
+      <div class="search-container">
+        <i class="material-icons search-icon">search</i>
+        <input 
+          type="text" 
+          placeholder="Search TuneUp" 
+          class="search-input"
+          v-model="searchQuery"
+          @focus="isSearchFocused = true"
+          @blur="isSearchFocused = false"
+        />
+      </div>
     </div>
 
-    <div class="nav-links" v-if="userRole && navigationItems[userRole]">
+    <div class="nav-center" v-if="userRole && navigationItems[userRole]">
       <router-link
         v-for="item in navigationItems[userRole]"
         :key="item.path"
         :to="item.path"
         class="nav-link"
+        :class="{ active: $route.path === item.path }"
       >
         <i class="material-icons">{{ item.icon }}</i>
-        <span>{{ item.name }}</span>
+        <span class="tooltip">{{ item.name }}</span>
       </router-link>
     </div>
 
     <div class="nav-right">
-      <button @click="logout" class="logout-btn">
-        <i class="material-icons">logout</i>
-        <span>Logout</span>
+      <button class="mobile-menu-toggle" @click="toggleNav">
+        <i class="material-icons">menu</i>
       </button>
+      
+      <div class="action-buttons">
+        <button class="icon-button" @click="toggleNotifications">
+          <i class="material-icons">notifications</i>
+          <span class="notification-badge" v-if="notificationCount > 0">{{ notificationCount }}</span>
+          <span class="tooltip">Notifications</span>
+        </button>
+        <button class="icon-button" @click="goToMessages()">
+          <i class="material-icons">message</i>
+          <span class="tooltip">Messages</span>
+        </button>
+        <div class="profile-menu">
+          <button class="profile-button" @click="toggleProfileMenu">
+            <div class="avatar">{{ userInitials }}</div>
+          </button>
+          <div class="dropdown-menu" v-if="showProfileMenu" :class="{ 'menu-active': showProfileMenu }">
+            <div class="menu-header">
+              <div class="avatar">{{ userInitials }}</div>
+              <div class="user-info">
+                <div class="user-name">{{ userName || 'TuneUp User' }}</div>
+                <div class="user-role">{{ userRole || 'User' }}</div>
+              </div>
+            </div>
+            <router-link to="/profile" class="menu-item" @click="showProfileMenu = false">
+              <i class="material-icons">person</i>
+              Profile
+            </router-link>
+            <router-link to="/settings" class="menu-item" @click="showProfileMenu = false">
+              <i class="material-icons">settings</i>
+              Settings
+            </router-link>
+            <div class="menu-divider"></div>
+            <button @click="logout" class="menu-item logout">
+              <i class="material-icons">logout</i>
+              Logout
+            </button>
+          </div>
+        </div>
+      </div>
     </div>
   </div>
 
-  <div v-if="isCollapsed" class="mobile-menu">
-    <router-link
-      v-for="item in navigationItems[userRole]"
-      :key="item.path"
-      :to="item.path"
-      class="mobile-link"
-    >
-      {{ item.name }}
-    </router-link>
+  <div class="notifications-panel" v-if="showNotifications" :class="{ 'panel-active': showNotifications }">
+    <div class="panel-header">
+      <h3>Notifications</h3>
+      <button class="close-button" @click="showNotifications = false">
+        <i class="material-icons">close</i>
+      </button>
+    </div>
+    <div class="notification-list">
+      <!-- Message notifications - limited to 5 -->
+      <div class="notification-item unread" v-for="(notification, index) in messageNotifications.slice(0, 5)" :key="index" @click="goToMessages(notification.senderId)">
+        <div class="notification-avatar blue">
+          <i class="material-icons">message</i>
+        </div>
+        <div class="notification-content">
+          <p class="notification-text"><strong>{{ notification.senderName }}</strong> sent you a message</p>
+          <p class="notification-preview">{{ truncateMessage(notification.content) }}</p>
+          <p class="notification-time">{{ formatTime(notification.time) }}</p>
+        </div>
+      </div>
+      
+      <!-- Show empty state if no notifications -->
+      <div class="empty-notifications" v-if="messageNotifications.length === 0">
+        <i class="material-icons">notifications_none</i>
+        <p>No new notifications</p>
+      </div>
+    </div>
+    <div class="panel-footer">
+      <button class="see-all-button" @click="goToMessages()">See all messages</button>
+    </div>
   </div>
+
+  <transition name="slide">
+    <div v-if="isCollapsed" class="mobile-menu">
+      <div class="mobile-search">
+        <i class="material-icons search-icon">search</i>
+        <input 
+          type="text" 
+          placeholder="Search TuneUp" 
+          class="search-input"
+        />
+      </div>
+      <router-link
+        v-for="item in navigationItems[userRole]"
+        :key="item.path"
+        :to="item.path"
+        class="mobile-link"
+        @click="isCollapsed = false"
+      >
+        <i class="material-icons">{{ item.icon }}</i>
+        {{ item.name }}
+      </router-link>
+    </div>
+  </transition>
+  
+  <!-- Overlay for mobile menu -->
+  <transition name="fade">
+    <div v-if="isCollapsed" class="mobile-overlay" @click="isCollapsed = false"></div>
+  </transition>
 </template>
 
 <script>
-import { logoutUser } from '../authService';
+import { logoutUser, fetchUsersWithChatHistory } from '../authService';
 import { useRouter } from 'vue-router';
 import Swal from 'sweetalert2/dist/sweetalert2.js';
 import 'sweetalert2/dist/sweetalert2.min.css';
@@ -59,6 +152,7 @@ export default {
     return {
       isCollapsed: false,
       userRole: null,
+      userName: null,
       navigationItems: {
         admin: [
           { name: 'Dashboard', path: '/admin-dashboard', icon: 'dashboard' },
@@ -72,22 +166,47 @@ export default {
           { name: 'Creator Profile', path: '/creatorprofile', icon: 'badge' },
           { name: 'Create Post', path: '/createpost', icon: 'add_circle' },
           { name: 'Creator Posts', path: '/creatorpost', icon: 'list' },
-          { name: 'Messages', path: '/messages', icon: 'message' },
           { name: 'Client Orders', path: '/user-payments', icon: 'payment' },
           { name: 'Creator Dashboard', path: '/creator-dashboard', icon: 'dashboard' },
         ],
         user: [
-        { name: 'Dashboard', path: '/dashboard', icon: 'dashboard' },
+          { name: 'Dashboard', path: '/dashboard', icon: 'dashboard' },
           { name: 'Upgrade to Creator', path: '/upgrade', icon: 'arrow_upward' },
           { name: 'Profile', path: '/profile', icon: 'person' },
           { name: 'Orders', path: '/client-payments', icon: 'payment' },
-          { name: 'Messages', path: '/messages', icon: 'message' },
         ],
       },
+      showProfileMenu: false,
+      showNotifications: false,
+      userInitials: 'TU',
+      notificationCount: 3,
+      searchQuery: '',
+      isSearchFocused: false,
+      messageNotifications: [],
     };
   },
-  created() {
+  async created() {
     this.userRole = localStorage.getItem('userRole');
+    this.userName = localStorage.getItem('userName') || 'TuneUp User';
+    
+    // Calculate user initials from name if available
+    if (this.userName && this.userName !== 'TuneUp User') {
+      this.userInitials = this.userName
+        .split(' ')
+        .map(name => name[0])
+        .join('')
+        .substring(0, 2)
+        .toUpperCase();
+    }
+    
+    // Close profile menu when clicking outside
+    document.addEventListener('click', this.handleClickOutside);
+    
+    // Fetch message notifications
+    await this.fetchMessageNotifications();
+  },
+  beforeUnmount() {
+    document.removeEventListener('click', this.handleClickOutside);
   },
   computed: {
     isLoggedIn() {
@@ -97,6 +216,42 @@ export default {
   methods: {
     toggleNav() {
       this.isCollapsed = !this.isCollapsed;
+      // Close other menus when opening mobile menu
+      if (this.isCollapsed) {
+        this.showProfileMenu = false;
+        this.showNotifications = false;
+      }
+    },
+    toggleProfileMenu(event) {
+      event.stopPropagation();
+      this.showProfileMenu = !this.showProfileMenu;
+      // Close notifications panel when opening profile menu
+      if (this.showProfileMenu) {
+        this.showNotifications = false;
+      }
+    },
+    toggleNotifications(event) {
+      event.stopPropagation();
+      this.showNotifications = !this.showNotifications;
+      // Close profile menu when opening notifications
+      if (this.showNotifications) {
+        this.showProfileMenu = false;
+      }
+    },
+    handleClickOutside(event) {
+      const profileMenu = document.querySelector('.profile-menu');
+      const notificationsButton = document.querySelector('.icon-button');
+      const notificationsPanel = document.querySelector('.notifications-panel');
+      
+      if (profileMenu && !profileMenu.contains(event.target) && this.showProfileMenu) {
+        this.showProfileMenu = false;
+      }
+      
+      if (notificationsPanel && !notificationsPanel.contains(event.target) && 
+          notificationsButton && !notificationsButton.contains(event.target) && 
+          this.showNotifications) {
+        this.showNotifications = false;
+      }
     },
     async logout() {
       try {
@@ -129,109 +284,712 @@ export default {
         });
       }
     },
+    async fetchMessageNotifications() {
+      try {
+        // Fetch chat history which includes users and their last messages
+        const chatHistory = await fetchUsersWithChatHistory();
+        
+        // Transform chat history into notifications
+        this.messageNotifications = chatHistory
+          .filter(chat => chat.lastMessage && !chat.lastMessage.read && chat.lastMessage.senderId !== this.currentUserId)
+          .map(chat => ({
+            senderId: chat.user.id,
+            senderName: `${chat.user.firstName} ${chat.user.lastName}`,
+            content: chat.lastMessage.content,
+            time: new Date(chat.lastMessage.createdAt),
+            read: false
+          }))
+          .sort((a, b) => b.time - a.time); // Sort by most recent
+          
+        // Update notification count
+        this.notificationCount = this.messageNotifications.length;
+      } catch (error) {
+        console.error('Error fetching message notifications:', error);
+      }
+    },
+    truncateMessage(message) {
+      // Check if it's a payment message
+      try {
+        const parsed = JSON.parse(message);
+        if (parsed.type === 'payment') {
+          return `Payment request: ₱${parsed.amount}`;
+        }
+      } catch (e) {
+        // Not a JSON message, continue with normal truncation
+      }
+      
+      return message.length > 30 ? message.substring(0, 27) + '...' : message;
+    },
+    formatTime(timestamp) {
+      const date = new Date(timestamp);
+      const now = new Date();
+      const diffMs = now - date;
+      const diffMins = Math.floor(diffMs / 60000);
+      const diffHours = Math.floor(diffMs / 3600000);
+      const diffDays = Math.floor(diffMs / 86400000);
+      
+      if (diffMins < 1) return 'Just now';
+      if (diffMins < 60) return `${diffMins}m ago`;
+      if (diffHours < 24) return `${diffHours}h ago`;
+      if (diffDays < 7) return `${diffDays}d ago`;
+      
+      return date.toLocaleDateString();
+    },
+    goToMessages(userId) {
+      // Close notifications panel
+      this.showNotifications = false;
+      
+      // Navigate to messages page, with optional userId parameter
+      if (userId) {
+        this.router.push({ path: '/messages', query: { userId } });
+      } else {
+        this.router.push('/messages');
+      }
+    },
   },
 };
 </script>
 
 <style scoped>
+/* Base Styles */
 .topnav {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 10px 20px;
+  padding: 0 16px;
+  height: 56px;
   background-color: white;
-  border-bottom: 1px solid #ccc;
-  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
-  font-family: 'Roboto', sans-serif;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  position: sticky;
+  top: 0;
+  z-index: 1000;
+  width: 100%;
+  box-sizing: border-box;
+  margin: 0;
 }
 
+/* Left Section */
 .nav-left {
   display: flex;
   align-items: center;
   gap: 10px;
+  flex: 1;
 }
 
-.brand {
+.brand-logo {
+  height: 40px;
+  width: auto;
+  transition: transform 0.3s ease;
+}
+
+.brand:hover .brand-logo {
+  transform: scale(1.05);
+}
+
+.search-container {
+  position: relative;
+  max-width: 240px;
+  transition: max-width 0.3s ease;
+}
+
+.search-container:focus-within {
+  max-width: 300px;
+}
+
+.search-input {
+  padding: 8px 8px 8px 36px;
+  border-radius: 20px;
+  border: none;
+  background: #f0f2f5;
+  width: 100%;
+  font-size: 14px;
+  transition: background-color 0.3s ease, box-shadow 0.3s ease;
+}
+
+.search-input:focus {
+  outline: none;
+  background-color: #e4e6eb;
+  box-shadow: 0 0 0 2px rgba(24, 119, 242, 0.2);
+}
+
+.search-icon {
+  position: absolute;
+  left: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #606770;
   font-size: 20px;
-  font-weight: bold;
-  color: black;
-  text-decoration: none;
 }
 
-.nav-links {
+/* Center Section */
+.nav-center {
   display: flex;
-  gap: 15px;
+  justify-content: center;
+  flex: 2;
+  gap: 4px;
 }
 
 .nav-link {
   display: flex;
   align-items: center;
-  gap: 5px;
-  color: black;
+  justify-content: center;
+  padding: 8px 16px;
+  color: #65676B;
   text-decoration: none;
-  padding: 5px 10px;
-  transition: background-color 0.3s ease;
+  border-radius: 8px;
+  transition: all 0.2s ease;
+  height: 56px;
+  position: relative;
+}
+
+.nav-link i {
+  font-size: 24px;
+  transition: transform 0.2s ease, color 0.2s ease;
+}
+
+.nav-link:hover i {
+  transform: translateY(-2px);
+  color: #1877f2;
 }
 
 .nav-link:hover {
-  background-color: #f0f0f0;
-  border-radius: 5px;
+  background-color: #f0f2f5;
 }
 
+.nav-link.active {
+  color: #1877f2;
+}
+
+.nav-link.active i {
+  color: #1877f2;
+}
+
+.nav-link.active::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  height: 3px;
+  background-color: #1877f2;
+  animation: slideIn 0.3s ease;
+}
+
+@keyframes slideIn {
+  from {
+    transform: scaleX(0);
+  }
+  to {
+    transform: scaleX(1);
+  }
+}
+
+/* Tooltip */
+.tooltip {
+  position: absolute;
+  bottom: -30px;
+  left: 50%;
+  transform: translateX(-50%);
+  background-color: rgba(0, 0, 0, 0.8);
+  color: white;
+  padding: 5px 10px;
+  border-radius: 4px;
+  font-size: 12px;
+  white-space: nowrap;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.2s ease, visibility 0.2s ease;
+  z-index: 1002;
+}
+
+.nav-link:hover .tooltip,
+.icon-button:hover .tooltip {
+  opacity: 1;
+  visibility: visible;
+}
+
+/* Right Section */
 .nav-right {
   display: flex;
   align-items: center;
+  flex: 1;
+  justify-content: flex-end;
+  gap: 8px;
 }
 
-.toggle-btn {
-  background: none;
+.mobile-menu-toggle {
+  display: none;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: #f0f2f5;
   border: none;
   cursor: pointer;
-  font-size: 24px;
+  align-items: center;
+  justify-content: center;
+  transition: background-color 0.2s ease;
 }
 
-.logout-btn {
-  background-color: #888585;
-  color: white;
+.mobile-menu-toggle:hover {
+  background-color: #e4e6eb;
+}
+
+.action-buttons {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.icon-button {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: #f0f2f5;
   border: none;
-  padding: 8px 12px;
-  border-radius: 5px;
   cursor: pointer;
   display: flex;
   align-items: center;
-  gap: 5px;
+  justify-content: center;
+  position: relative;
+  transition: background-color 0.2s ease, transform 0.2s ease;
 }
 
-.logout-btn:hover {
-  background-color: #14995b;
+.icon-button:hover {
+  background: #e4e6eb;
+  transform: translateY(-2px);
 }
 
+.icon-button:active {
+  transform: translateY(0);
+}
+
+.notification-badge {
+  position: absolute;
+  top: -5px;
+  right: -5px;
+  background: #e41e3f;
+  color: white;
+  border-radius: 50%;
+  padding: 3px 6px;
+  font-size: 12px;
+  font-weight: bold;
+  min-width: 18px;
+  text-align: center;
+  animation: pulse 1.5s infinite;
+}
+
+@keyframes pulse {
+  0% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.1);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+/* Profile Menu */
+.profile-menu {
+  position: relative;
+}
+
+.profile-button {
+  padding: 0;
+  border: none;
+  background: none;
+  cursor: pointer;
+  transition: transform 0.2s ease;
+}
+
+.profile-button:hover {
+  transform: translateY(-2px);
+}
+
+.avatar {
+  width: 40px;
+  height: 40px;
+  background: #1877f2;
+  color: white;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: bold;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.profile-button:hover .avatar {
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+.dropdown-menu {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+  width: 300px;
+  padding: 8px 0;
+  margin-top: 8px;
+  z-index: 1001;
+  opacity: 0;
+  transform: translateY(-10px);
+  transition: opacity 0.3s ease, transform 0.3s ease;
+}
+
+.menu-active {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.menu-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  border-bottom: 1px solid #dadde1;
+}
+
+.user-info {
+  display: flex;
+  flex-direction: column;
+}
+
+.user-name {
+  font-weight: bold;
+  font-size: 16px;
+}
+
+.user-role {
+  color: #65676B;
+  font-size: 14px;
+  text-transform: capitalize;
+}
+
+.menu-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  color: #050505;
+  text-decoration: none;
+  cursor: pointer;
+  font-size: 15px;
+  transition: background-color 0.2s ease;
+}
+
+.menu-item:hover {
+  background: #f0f2f5;
+}
+
+.menu-item i {
+  color: #1877f2;
+}
+
+.menu-divider {
+  height: 1px;
+  background: #dadde1;
+  margin: 8px 0;
+}
+
+.logout {
+  color: #e41e3f;
+  border: none;
+  background: none;
+  width: 100%;
+  text-align: left;
+  font-size: inherit;
+}
+
+.logout i {
+  color: #e41e3f;
+}
+
+/* Notifications Panel */
+.notifications-panel {
+  position: fixed;
+  top: 56px;
+  right: 16px;
+  width: 360px;
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+  z-index: 1001;
+  max-height: 80vh;
+  display: flex;
+  flex-direction: column;
+  opacity: 0;
+  transform: translateY(-10px);
+  transition: opacity 0.3s ease, transform 0.3s ease;
+}
+
+.panel-active {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.panel-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px;
+  border-bottom: 1px solid #dadde1;
+}
+
+.panel-header h3 {
+  margin: 0;
+  font-size: 20px;
+  color: #050505;
+}
+
+.close-button {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: #65676B;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  transition: background-color 0.2s ease;
+}
+
+.close-button:hover {
+  background-color: #f0f2f5;
+}
+
+.notification-list {
+  overflow-y: auto;
+  max-height: 60vh;
+}
+
+.notification-item {
+  display: flex;
+  padding: 12px 16px;
+  border-bottom: 1px solid #f0f2f5;
+  transition: background-color 0.2s ease;
+  cursor: pointer;
+}
+
+.notification-item:hover {
+  background-color: #f0f2f5;
+}
+
+.notification-item.unread {
+  background-color: #e7f3ff;
+}
+
+.notification-item.unread:hover {
+  background-color: #daeafd;
+}
+
+.notification-avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-right: 12px;
+  color: white;
+}
+
+.notification-avatar.blue {
+  background-color: #1877f2;
+}
+
+.notification-avatar.green {
+  background-color: #42b72a;
+}
+
+.notification-avatar.purple {
+  background-color: #8a3ab9;
+}
+
+.notification-content {
+  flex: 1;
+}
+
+.notification-text {
+  margin: 0 0 4px 0;
+  font-size: 14px;
+  color: #050505;
+}
+
+.notification-time {
+  margin: 0;
+  font-size: 12px;
+  color: #65676B;
+}
+
+.panel-footer {
+  padding: 12px 16px;
+  border-top: 1px solid #dadde1;
+  text-align: center;
+}
+
+.see-all-button {
+  background: none;
+  border: none;
+  color: #1877f2;
+  font-weight: bold;
+  cursor: pointer;
+  padding: 8px 16px;
+  width: 100%;
+  border-radius: 4px;
+  transition: background-color 0.2s ease;
+}
+
+.see-all-button:hover {
+  background-color: #f0f2f5;
+}
+
+/* Mobile Menu */
 .mobile-menu {
   display: none;
   flex-direction: column;
   background-color: white;
-  padding: 10px 0;
-  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+  padding: 0;
+  margin: 0;
+  position: fixed;
+  top: 56px;
+  left: 0;
+  width: 80%;
+  max-width: 320px;
+  height: calc(100vh - 56px);
+  box-shadow: 2px 0 5px rgba(0, 0, 0, 0.1);
+  z-index: 1000;
+  overflow-y: auto;
+}
+
+.mobile-search {
+  position: relative;
+  padding: 16px;
+  border-bottom: 1px solid #dadde1;
 }
 
 .mobile-link {
-  padding: 10px 20px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 16px;
   text-decoration: none;
-  color: black;
-  transition: background-color 0.3s ease;
+  color: #050505;
+  transition: background-color 0.3s ease, transform 0.2s ease;
+  border-bottom: 1px solid #f0f2f5;
+}
+
+.mobile-link i {
+  color: #1877f2;
 }
 
 .mobile-link:hover {
   background-color: #f0f0f0;
+  transform: translateX(5px);
+}
+
+.mobile-overlay {
+  display: none;
+  position: fixed;
+  top: 56px;
+  left: 0;
+  width: 100%;
+  height: calc(100vh - 56px);
+  background-color: rgba(0, 0, 0, 0.5);
+  z-index: 999;
+}
+
+/* Animations */
+.slide-enter-active,
+.slide-leave-active {
+  transition: transform 0.3s ease;
+}
+
+.slide-enter-from,
+.slide-leave-to {
+  transform: translateX(-100%);
+}
+
+.fade-enter-active,
+.fade-leave-active {
+  transition: opacity 0.3s ease;
+}
+
+.fade-enter-from,
+.fade-leave-to {
+  opacity: 0;
+}
+
+/* Media Queries */
+@media (min-width: 769px) and (max-width: 1024px) {
+  .nav-link {
+    padding: 8px 12px;
+  }
 }
 
 @media (max-width: 768px) {
-  .nav-links {
+  .nav-center {
     display: none;
   }
-
+  
+  .search-container {
+    display: none;
+  }
+  
+  .mobile-menu-toggle {
+    display: flex;
+  }
+  
   .mobile-menu {
     display: flex;
   }
+  
+  .mobile-overlay {
+    display: block;
+  }
+  
+  .nav-left {
+    flex: 0;
+  }
+  
+  .nav-right {
+    flex: 1;
+  }
+  
+  .notifications-panel {
+    width: 100%;
+    right: 0;
+    border-radius: 0;
+  }
+}
+
+/* Updated notification styles */
+.notification-preview {
+  margin: 4px 0;
+  font-size: 13px;
+  color: #65676B;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.empty-notifications {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 30px 0;
+  color: #65676B;
+}
+
+.empty-notifications i {
+  font-size: 48px;
+  margin-bottom: 10px;
+  color: #dadde1;
 }
 </style>

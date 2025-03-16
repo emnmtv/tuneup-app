@@ -2,7 +2,7 @@ const BASE_URL = "http://localhost:3200/auth"; // Base API URL
 // const BASE_URL = "http://192.168.0.104:3200/auth"; // Base API URL
 
 // New base URL for images and videos
-const MEDIA_BASE_URL = "http://localhost:3200/uploads"; // Base URL for media files (images and videos)
+const MEDIA_BASE_URL = "http://localhost:3200"; // Remove /uploads from base URL
 // const MEDIA_BASE_URL = "http://192.168.0.104:3200/uploads"; 
 // Add this function to parse JWT token
 export const getUserIdFromToken = () => {
@@ -56,25 +56,75 @@ export async function getProfile() {
     },
   });
 
-  if (!response.ok) throw new Error("Failed to fetch profile");
-  return response.json();
+  if (!response.ok) {
+    const errorData = await response.json();
+    throw new Error(errorData.error || "Failed to fetch profile");
+  }
+
+  const data = await response.json();
+
+  // Add full URLs for media files
+  if (data.userProfile) {
+    if (data.userProfile.profilePicture) {
+      data.userProfile.profilePicture = `${MEDIA_BASE_URL}${data.userProfile.profilePicture}`;
+    }
+    if (data.userProfile.coverPhoto) {
+      data.userProfile.coverPhoto = `${MEDIA_BASE_URL}${data.userProfile.coverPhoto}`;
+    }
+  }
+
+  return data;
 }
 
 export async function updateProfile(profileData) {
   const token = localStorage.getItem("token");
   if (!token) throw new Error("No token found");
 
+  const formData = new FormData();
+
+  // Add regular fields
+  formData.append('firstName', profileData.firstName || '');
+  formData.append('lastName', profileData.lastName || '');
+  formData.append('phoneNumber', profileData.phoneNumber || '');
+  formData.append('address', profileData.address || '');
+  if (profileData.dateOfBirth) {
+    formData.append('dateOfBirth', profileData.dateOfBirth);
+  }
+
+  // Add files if they exist
+  if (profileData.profilePicture instanceof File) {
+    formData.append('profilePicture', profileData.profilePicture);
+  }
+  if (profileData.coverPhoto instanceof File) {
+    formData.append('coverPhoto', profileData.coverPhoto);
+  }
+
   const response = await fetch(`${BASE_URL}/profile`, {
     method: "PUT",
     headers: {
-      "Content-Type": "application/json",
       Authorization: `Bearer ${token}`,
     },
-    body: JSON.stringify(profileData),
+    body: formData,
   });
 
-  if (!response.ok) throw new Error("Failed to update profile");
-  return response.json();
+  if (!response.ok) {
+    const errorData = await response.json();
+    throw new Error(errorData.error || "Failed to update profile");
+  }
+
+  const data = await response.json();
+
+  // Add full URLs for media files in the response
+  if (data.user) {
+    if (data.user.profilePicture) {
+      data.user.profilePicture = `${MEDIA_BASE_URL}${data.user.profilePicture}`;
+    }
+    if (data.user.coverPhoto) {
+      data.user.coverPhoto = `${MEDIA_BASE_URL}${data.user.coverPhoto}`;
+    }
+  }
+
+  return data;
 }
 
 export async function registerUser(userData) {
@@ -254,8 +304,8 @@ export const fetchUserProfileAndPosts = async () => {
       ...data,
       posts: data.posts.map(post => ({
         ...post,
-        image: post.image ? `${MEDIA_BASE_URL}/${post.image}` : null,
-        video: post.video ? `${MEDIA_BASE_URL}/${post.video}` : null,
+        image: post.image ? `${MEDIA_BASE_URL}/uploads/${post.image}` : null,
+        video: post.video ? `${MEDIA_BASE_URL}/uploads/${post.video}` : null,
       })),
     };
 
@@ -347,8 +397,8 @@ export const fetchAllPosts = async () => {
       .filter(post => post.status !== 'rejected')
       .map(post => ({
         ...post,
-        image: post.image ? `${MEDIA_BASE_URL}/${post.image}` : null,
-        video: post.video ? `${MEDIA_BASE_URL}/${post.video}` : null,
+        image: post.image ? `${MEDIA_BASE_URL}/uploads/${post.image}` : null,
+        video: post.video ? `${MEDIA_BASE_URL}/uploads/${post.video}` : null,
       }));
 
     return postsWithMedia;
@@ -369,8 +419,8 @@ export const fetchPostDetails = async (postId) => {
     // Construct full URLs for images and videos
     return {
       ...data,
-      image: data.image ? `${MEDIA_BASE_URL}/${data.image}` : null,
-      video: data.video ? `${MEDIA_BASE_URL}/${data.video}` : null,
+      image: data.image ? `${MEDIA_BASE_URL}/uploads/${data.image}` : null,
+      video: data.video ? `${MEDIA_BASE_URL}/uploads/${data.video}` : null,
     };
   } catch (error) {
     console.error("Error fetching post details:", error);
@@ -765,8 +815,8 @@ export const fetchAllPostsAdmin = async () => {
     // Add media URLs to all posts
     const postsWithMedia = data.map(post => ({
       ...post,
-      image: post.image ? `${MEDIA_BASE_URL}/${post.image}` : null,
-      video: post.video ? `${MEDIA_BASE_URL}/${post.video}` : null,
+      image: post.image ? `${MEDIA_BASE_URL}/uploads/${post.image}` : null,
+      video: post.video ? `${MEDIA_BASE_URL}/uploads/${post.video}` : null,
     }));
 
     return postsWithMedia;

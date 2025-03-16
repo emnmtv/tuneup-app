@@ -1,5 +1,5 @@
 <script setup>
-import { ref, onMounted } from "vue";
+import { ref, onMounted, computed } from "vue";
 import { getProfile, updateProfile } from "../authService";
 import Swal from "sweetalert2";
 
@@ -18,6 +18,54 @@ const message = ref("");
 const messageType = ref("success");
 const userRole = ref(localStorage.getItem('userRole') || 'User');
 const originalProfile = ref(null);
+
+const profilePictureInput = ref(null);
+const coverPhotoInput = ref(null);
+const tempProfilePicture = ref(null);
+const tempCoverPhoto = ref(null);
+
+const avatarStyle = computed(() => {
+  if (tempProfilePicture.value) {
+    return {
+      backgroundImage: `url(${tempProfilePicture.value})`,
+      backgroundSize: 'cover',
+      backgroundPosition: 'center',
+      color: 'transparent',
+    };
+  }
+  if (profile.value.profilePicture) {
+    return {
+      backgroundImage: `url(${profile.value.profilePicture})`,
+      backgroundSize: 'cover',
+      backgroundPosition: 'center',
+      color: 'transparent',
+    };
+  }
+  return {
+    backgroundColor: getAvatarColor(profile.value.firstName),
+    color: 'white',
+  };
+});
+
+const coverPhotoStyle = computed(() => {
+  if (tempCoverPhoto.value) {
+    return {
+      backgroundImage: `url(${tempCoverPhoto.value})`,
+      backgroundSize: 'cover',
+      backgroundPosition: 'center',
+    };
+  }
+  if (profile.value.coverPhoto) {
+    return {
+      backgroundImage: `url(${profile.value.coverPhoto})`,
+      backgroundSize: 'cover',
+      backgroundPosition: 'center',
+    };
+  }
+  return {
+    background: 'linear-gradient(45deg, #1877F2, #2196F3)',
+  };
+});
 
 const getInitials = (firstName, lastName) => {
   const first = firstName?.charAt(0) || '';
@@ -56,9 +104,64 @@ const fetchProfile = async () => {
   }
 };
 
+const triggerProfilePictureUpload = () => {
+  if (!isEditing.value) return;
+  profilePictureInput.value.click();
+};
+
+const triggerCoverPhotoUpload = (event) => {
+  if (!isEditing.value) return;
+  event?.stopPropagation(); // Stop event propagation
+  coverPhotoInput.value.click();
+};
+
+const handleProfilePictureChange = (event) => {
+  const file = event.target.files[0];
+  if (file) {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      tempProfilePicture.value = e.target.result;
+      profile.value.profilePicture = file;
+    };
+    reader.readAsDataURL(file);
+  }
+};
+
+const handleCoverPhotoChange = (event) => {
+  const file = event.target.files[0];
+  if (file) {
+    // Validate file type
+    if (!file.type.match(/^image\/(jpeg|png|gif|webp)$/)) {
+      Swal.fire({
+        icon: 'error',
+        title: 'Invalid file type',
+        text: 'Please upload an image file (JPEG, PNG, GIF, or WebP)',
+      });
+      return;
+    }
+
+    // Validate file size (e.g., 5MB limit)
+    if (file.size > 5 * 1024 * 1024) {
+      Swal.fire({
+        icon: 'error',
+        title: 'File too large',
+        text: 'Please upload an image smaller than 5MB',
+      });
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      tempCoverPhoto.value = e.target.result;
+      profile.value.coverPhoto = file;
+    };
+    reader.readAsDataURL(file);
+  }
+};
+
 const saveProfile = async () => {
   try {
-    // First ask for confirmation
+    loading.value = true;
     const result = await Swal.fire({
       title: 'Save Changes?',
       text: 'Are you sure you want to update your profile?',
@@ -74,8 +177,19 @@ const saveProfile = async () => {
       return;
     }
 
-    loading.value = true;
-    await updateProfile(profile.value);
+    const updatedProfile = await updateProfile(profile.value);
+    
+    // Update the profile with new image URLs
+    profile.value = {
+      ...profile.value,
+      profilePicture: updatedProfile.user.profilePicture,
+      coverPhoto: updatedProfile.user.coverPhoto,
+    };
+
+    // Clear temporary preview images
+    tempProfilePicture.value = null;
+    tempCoverPhoto.value = null;
+
     await Swal.fire({
       icon: 'success',
       title: 'Profile Updated!',
@@ -83,8 +197,8 @@ const saveProfile = async () => {
       timer: 2000,
       showConfirmButton: false
     });
+    
     isEditing.value = false;
-    originalProfile.value = { ...profile.value };
   } catch (error) {
     console.error(error);
     Swal.fire({
@@ -126,370 +240,614 @@ const cancelEdit = async () => {
   fetchProfile(); // Reset to original values
 };
 
+const getAvatarColor = (name) => {
+  const colors = [
+    '#1877F2', '#E84C3D', '#2ECC70', '#3498DB',
+    '#9B59B6', '#F1C40F', '#E67E22', '#1ABC9C'
+  ];
+  const charCode = name ? name.charCodeAt(0) : 0;
+  return colors[charCode % colors.length];
+};
+
+const handleImageError = (event) => {
+  event.target.style.display = 'none';
+  // Optionally show a fallback
+  if (event.target.classList.contains('avatar')) {
+    event.target.textContent = getInitials(profile.value.firstName, profile.value.lastName);
+  }
+};
+
 onMounted(fetchProfile);
 </script>
 
 <template>
   <div class="profile-page">
-    <div class="profile-container">
-      <!-- Profile Header -->
-      <div class="profile-header">
-        <div class="avatar-section">
-          <div class="avatar">
-            {{ getInitials(profile.firstName, profile.lastName) }}
-          </div>
-          <div class="user-info">
-            <h2>{{ profile.firstName }} {{ profile.lastName || 'Your Name' }}</h2>
-            <span class="role-badge">{{ userRole }}</span>
-          </div>
+    <!-- Cover Photo Section -->
+    <div class="cover-section">
+      <div class="cover-photo" 
+           :style="coverPhotoStyle"
+           @click="isEditing && triggerCoverPhotoUpload">
+        <input
+          type="file"
+          ref="coverPhotoInput"
+          class="hidden-input"
+          accept="image/*"
+          @change="handleCoverPhotoChange"
+        />
+        <div class="cover-overlay">
+          <button v-if="isEditing" 
+                  class="upload-btn"
+                  @click.stop="triggerCoverPhotoUpload">
+            <i class="material-icons">camera_alt</i>
+            Change Cover
+          </button>
         </div>
-        <button @click="toggleEdit" class="edit-btn" v-if="!isEditing">
+      </div>
+    </div>
+
+    <!-- Profile Main Section -->
+    <div class="profile-main">
+      <!-- Profile Header with Avatar -->
+      <div class="profile-header">
+        <div class="avatar-container">
+          <div class="avatar" 
+               :style="avatarStyle"
+               @error="handleImageError"
+               @click="isEditing && triggerProfilePictureUpload">
+            <template v-if="!profile.profilePicture && !tempProfilePicture">
+              {{ getInitials(profile.firstName, profile.lastName) }}
+            </template>
+            <input
+              type="file"
+              ref="profilePictureInput"
+              class="hidden-input"
+              accept="image/*"
+              @change="handleProfilePictureChange"
+            />
+          </div>
+          <button v-if="isEditing" class="avatar-edit-btn" @click="triggerProfilePictureUpload">
+            <i class="material-icons">camera_alt</i>
+          </button>
+        </div>
+        
+        <div class="profile-info">
+          <h1>{{ profile.firstName }} {{ profile.lastName }}</h1>
+          <span class="role-badge" :class="userRole.toLowerCase()">{{ userRole }}</span>
+        </div>
+
+        <button @click="toggleEdit" class="edit-profile-btn" v-if="!isEditing">
           <i class="material-icons">edit</i>
           Edit Profile
         </button>
       </div>
 
-      <!-- Success/Error Messages -->
-      <div v-if="message" :class="['message', messageType]">
-        <i class="material-icons">{{ messageType === 'success' ? 'check_circle' : 'error' }}</i>
-        {{ message }}
-      </div>
-
       <!-- Profile Content -->
-      <div class="profile-content">
+      <div class="profile-content" :class="{ 'editing': isEditing }">
         <!-- View Mode -->
-        <div v-if="!isEditing" class="profile-details">
-          <div class="detail-group">
-            <div class="detail-item">
+        <div v-if="!isEditing" class="info-cards">
+          <div class="info-card">
+            <h3>About</h3>
+            <div class="info-item">
               <i class="material-icons">email</i>
-              <div class="detail-text">
+              <div>
                 <label>Email</label>
                 <span>{{ profile.email }}</span>
               </div>
             </div>
-
-            <div class="detail-item">
+            <div class="info-item">
               <i class="material-icons">phone</i>
-              <div class="detail-text">
-                <label>Phone Number</label>
-                <span>{{ profile.phoneNumber || 'Not provided' }}</span>
+              <div>
+                <label>Phone</label>
+                <span>{{ profile.phoneNumber || 'Add phone number' }}</span>
               </div>
             </div>
-
-            <div class="detail-item">
-              <i class="material-icons">location_on</i>
-              <div class="detail-text">
-                <label>Address</label>
-                <span>{{ profile.address || 'Not provided' }}</span>
-              </div>
-            </div>
-
-            <div class="detail-item">
+            <div class="info-item">
               <i class="material-icons">cake</i>
-              <div class="detail-text">
-                <label>Date of Birth</label>
-                <span>{{ formatDate(profile.dateOfBirth) || 'Not provided' }}</span>
+              <div>
+                <label>Birthday</label>
+                <span>{{ formatDate(profile.dateOfBirth) || 'Add birthday' }}</span>
+              </div>
+            </div>
+            <div class="info-item">
+              <i class="material-icons">location_on</i>
+              <div>
+                <label>Address</label>
+                <span>{{ profile.address || 'Add address' }}</span>
               </div>
             </div>
           </div>
         </div>
 
         <!-- Edit Mode -->
-        <form v-else @submit.prevent="saveProfile" class="edit-form">
-          <div class="form-grid">
-            <div class="form-group">
-              <label>
-                <i class="material-icons">person</i>
-                First Name
-              </label>
-              <input 
-                v-model="profile.firstName" 
-                type="text" 
-                placeholder="Enter your first name"
-              />
+        <transition name="fade">
+          <form v-if="isEditing" @submit.prevent="saveProfile" class="edit-form">
+            <div class="form-grid">
+              <div class="form-group">
+                <label>First Name</label>
+                <div class="input-with-icon">
+                  <i class="material-icons">person</i>
+                  <input v-model="profile.firstName" type="text" />
+                </div>
+              </div>
+
+              <div class="form-group">
+                <label>Last Name</label>
+                <div class="input-with-icon">
+                  <i class="material-icons">person</i>
+                  <input v-model="profile.lastName" type="text" />
+                </div>
+              </div>
+
+              <div class="form-group">
+                <label>Phone Number</label>
+                <div class="input-with-icon">
+                  <i class="material-icons">phone</i>
+                  <input v-model="profile.phoneNumber" type="tel" />
+                </div>
+              </div>
+
+              <div class="form-group">
+                <label>Date of Birth</label>
+                <div class="input-with-icon">
+                  <i class="material-icons">cake</i>
+                  <input v-model="profile.dateOfBirth" type="date" />
+                </div>
+              </div>
+
+              <div class="form-group full-width">
+                <label>Address</label>
+                <div class="input-with-icon">
+                  <i class="material-icons">location_on</i>
+                  <input v-model="profile.address" type="text" />
+                </div>
+              </div>
             </div>
 
-            <div class="form-group">
-              <label>
-                <i class="material-icons">person</i>
-                Last Name
-              </label>
-              <input 
-                v-model="profile.lastName" 
-                type="text" 
-                placeholder="Enter your last name"
-              />
+            <div class="form-actions">
+              <button type="button" @click="cancelEdit" class="cancel-btn">
+                <i class="material-icons">close</i>
+                Cancel
+              </button>
+              <button type="submit" class="save-btn" :disabled="loading">
+                <i class="material-icons">save</i>
+                {{ loading ? 'Saving...' : 'Save Changes' }}
+              </button>
             </div>
-
-            <div class="form-group">
-              <label>
-                <i class="material-icons">phone</i>
-                Phone Number
-              </label>
-              <input 
-                v-model="profile.phoneNumber" 
-                type="tel" 
-                placeholder="Enter your phone number"
-              />
-            </div>
-
-            <div class="form-group">
-              <label>
-                <i class="material-icons">location_on</i>
-                Address
-              </label>
-              <input 
-                v-model="profile.address" 
-                type="text" 
-                placeholder="Enter your address"
-              />
-            </div>
-
-            <div class="form-group">
-              <label>
-                <i class="material-icons">cake</i>
-                Date of Birth
-              </label>
-              <input 
-                v-model="profile.dateOfBirth" 
-                type="date"
-              />
-            </div>
-          </div>
-
-          <div class="form-actions">
-            <button type="button" @click="cancelEdit" class="cancel-btn">
-              <i class="material-icons">close</i>
-              Cancel
-            </button>
-            <button type="submit" class="save-btn" :disabled="loading">
-              <i class="material-icons">save</i>
-              {{ loading ? 'Saving...' : 'Save Changes' }}
-            </button>
-          </div>
-        </form>
+          </form>
+        </transition>
       </div>
     </div>
+
+    <!-- Success/Error Toast -->
+    <transition name="toast">
+      <div v-if="message" :class="['toast', messageType]">
+        <i class="material-icons">{{ messageType === 'success' ? 'check_circle' : 'error' }}</i>
+        {{ message }}
+      </div>
+    </transition>
   </div>
 </template>
 
 <style scoped>
 .profile-page {
+  background: #f0f2f5;
   min-height: 100vh;
-  background: #f5f7fb;
-  padding: 2rem;
 }
 
-.profile-container {
-  max-width: 800px;
-  margin: 0 auto;
-  background: white;
-  border-radius: 12px;
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-  overflow: hidden;
+.cover-section {
+  position: relative;
+  width: 100%;
+  height: 350px;
+  cursor: pointer;
+}
+
+.cover-photo {
+  width: 100%;
+  height: 100%;
+  background-position: center;
+  background-size: cover;
+  position: relative;
+  transition: all 0.3s ease;
+}
+
+.cover-overlay {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 100%;
+  background: linear-gradient(
+    to bottom,
+    transparent 60%,
+    rgba(0, 0, 0, 0.3)
+  );
+  display: flex;
+  align-items: flex-end;
+  justify-content: flex-end;
+  padding: 20px;
+}
+
+.profile-main {
+  max-width: 940px;
+  margin: -90px auto 0;
+  padding: 0 16px;
+  position: relative;
 }
 
 .profile-header {
   display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 2rem;
-  background: linear-gradient(135deg, #2196f3, #1976d2);
-  color: white;
+  align-items: flex-end;
+  margin-bottom: 16px;
+  padding: 0 16px 16px;
 }
 
-.avatar-section {
-  display: flex;
-  align-items: center;
-  gap: 1.5rem;
+.avatar-container {
+  position: relative;
+  margin-right: 24px;
 }
 
 .avatar {
-  width: 80px;
-  height: 80px;
-  background: white;
-  color: #2196f3;
+  width: 168px;
+  height: 168px;
   border-radius: 50%;
+  border: 6px solid white;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 2rem;
-  font-weight: 600;
+  font-size: 48px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+  transition: transform 0.3s ease;
+  cursor: pointer;
+  background-position: center;
+  background-size: cover;
+  position: relative;
 }
 
-.user-info h2 {
-  margin: 0;
-  font-size: 1.8rem;
+.avatar:hover {
+  transform: scale(1.02);
+}
+
+.avatar:hover::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.1);
+  border-radius: 50%;
+}
+
+.avatar-edit-btn {
+  position: absolute;
+  bottom: 8px;
+  right: 8px;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.9);
+  border: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+  z-index: 2;
+}
+
+.avatar-edit-btn:hover {
+  background: white;
+  transform: scale(1.1);
+}
+
+.profile-info {
+  flex: 1;
+  padding-bottom: 8px;
+}
+
+.profile-info h1 {
+  margin: 0 0 8px;
+  font-size: 32px;
+  color: #1c1e21;
 }
 
 .role-badge {
   display: inline-block;
-  padding: 0.25rem 0.75rem;
-  background: rgba(255, 255, 255, 0.2);
-  border-radius: 15px;
-  font-size: 0.9rem;
-  margin-top: 0.5rem;
+  padding: 4px 12px;
+  border-radius: 16px;
+  font-size: 14px;
+  font-weight: 500;
 }
 
-.message {
+.role-badge.creator {
+  background: #e3f2fd;
+  color: #1877F2;
+}
+
+.role-badge.user {
+  background: #f5f6f7;
+  color: #65676b;
+}
+
+.role-badge.admin {
+  background: #fce4ec;
+  color: #e91e63;
+}
+
+.edit-profile-btn {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
-  padding: 1rem;
-  margin: 1rem;
-  border-radius: 8px;
+  gap: 8px;
+  padding: 8px 16px;
+  background: #e4e6eb;
+  border: none;
+  border-radius: 6px;
+  font-size: 15px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
 }
 
-.message.success {
-  background: #e8f5e9;
-  color: #2e7d32;
-}
-
-.message.error {
-  background: #ffebee;
-  color: #c62828;
+.edit-profile-btn:hover {
+  background: #d8dadf;
+  transform: translateY(-2px);
 }
 
 .profile-content {
-  padding: 2rem;
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+  margin-bottom: 16px;
+  transition: all 0.3s ease;
 }
 
-.detail-group {
-  display: grid;
-  gap: 1.5rem;
+.info-cards {
+  padding: 16px;
 }
 
-.detail-item {
+.info-card {
+  background: white;
+  border-radius: 8px;
+  padding: 16px;
+}
+
+.info-card h3 {
+  margin: 0 0 16px;
+  color: #1c1e21;
+  font-size: 20px;
+}
+
+.info-item {
   display: flex;
   align-items: center;
-  gap: 1rem;
-  padding: 1rem;
-  background: #f8f9fa;
-  border-radius: 8px;
+  padding: 12px 0;
+  border-bottom: 1px solid #f0f2f5;
 }
 
-.detail-item i {
-  color: #2196f3;
+.info-item:last-child {
+  border-bottom: none;
 }
 
-.detail-text {
-  display: flex;
-  flex-direction: column;
+.info-item i {
+  color: #1877F2;
+  margin-right: 12px;
 }
 
-.detail-text label {
-  font-size: 0.9rem;
-  color: #666;
+.info-item label {
+  font-size: 13px;
+  color: #65676b;
+  margin-bottom: 4px;
 }
 
-.detail-text span {
-  font-size: 1.1rem;
-  color: #333;
+.info-item span {
+  display: block;
+  color: #1c1e21;
+}
+
+.edit-form {
+  padding: 24px;
 }
 
 .form-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-  gap: 1.5rem;
+  gap: 16px;
 }
 
 .form-group {
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
+  margin-bottom: 16px;
 }
 
-.form-group label {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  color: #666;
+.form-group.full-width {
+  grid-column: 1 / -1;
 }
 
-.form-group input {
-  padding: 0.75rem;
-  border: 1px solid #ddd;
-  border-radius: 8px;
-  font-size: 1rem;
-  transition: all 0.3s;
+.input-with-icon {
+  position: relative;
+  margin-top: 8px;
 }
 
-.form-group input:focus {
-  border-color: #2196f3;
-  box-shadow: 0 0 0 3px rgba(33, 150, 243, 0.1);
+.input-with-icon i {
+  position: absolute;
+  left: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #65676b;
+}
+
+.input-with-icon input {
+  width: 100%;
+  padding: 12px 12px 12px 40px;
+  border: 1px solid #e4e6eb;
+  border-radius: 6px;
+  font-size: 15px;
+  transition: all 0.2s ease;
+}
+
+.input-with-icon input:focus {
+  border-color: #1877F2;
+  box-shadow: 0 0 0 2px rgba(24,119,242,0.2);
   outline: none;
 }
 
 .form-actions {
   display: flex;
-  gap: 1rem;
-  margin-top: 2rem;
   justify-content: flex-end;
+  gap: 12px;
+  margin-top: 24px;
 }
 
-.edit-btn, .save-btn, .cancel-btn {
+.save-btn, .cancel-btn {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
-  padding: 0.75rem 1.5rem;
+  gap: 8px;
+  padding: 8px 16px;
   border: none;
-  border-radius: 8px;
-  font-size: 1rem;
+  border-radius: 6px;
+  font-size: 15px;
+  font-weight: 500;
   cursor: pointer;
-  transition: all 0.3s;
-}
-
-.edit-btn {
-  background: rgba(255, 255, 255, 0.2);
-  color: white;
+  transition: all 0.2s ease;
 }
 
 .save-btn {
-  background: #2196f3;
+  background: #1877F2;
   color: white;
 }
 
-.cancel-btn {
-  background: #f5f5f5;
-  color: #666;
-}
-
-.edit-btn:hover, .save-btn:hover {
+.save-btn:hover {
+  background: #166fe5;
   transform: translateY(-2px);
 }
 
-.save-btn:disabled {
-  background: #ccc;
-  cursor: not-allowed;
-  transform: none;
+.cancel-btn {
+  background: #e4e6eb;
+  color: #050505;
+}
+
+.cancel-btn:hover {
+  background: #d8dadf;
+  transform: translateY(-2px);
+}
+
+.toast {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 24px;
+  border-radius: 8px;
+  color: white;
+  font-weight: 500;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+  z-index: 1000;
+}
+
+.toast.success {
+  background: #43a047;
+}
+
+.toast.error {
+  background: #d32f2f;
+}
+
+/* Animations */
+.fade-enter-active,
+.fade-leave-active {
+  transition: opacity 0.3s ease;
+}
+
+.fade-enter-from,
+.fade-leave-to {
+  opacity: 0;
+}
+
+.toast-enter-active,
+.toast-leave-active {
+  transition: all 0.3s ease;
+}
+
+.toast-enter-from {
+  opacity: 0;
+  transform: translateY(20px);
+}
+
+.toast-leave-to {
+  opacity: 0;
+  transform: translateX(100%);
 }
 
 @media (max-width: 768px) {
-  .profile-page {
-    padding: 1rem;
-  }
-
   .profile-header {
     flex-direction: column;
+    align-items: center;
     text-align: center;
-    gap: 1rem;
+    padding-top: 16px;
   }
 
-  .avatar-section {
-    flex-direction: column;
+  .avatar-container {
+    margin: 0 0 16px;
   }
 
-  .form-grid {
-    grid-template-columns: 1fr;
+  .profile-info {
+    margin-bottom: 16px;
   }
 
   .form-actions {
     flex-direction: column;
   }
 
-  .edit-btn, .save-btn, .cancel-btn {
+  .save-btn, .cancel-btn {
     width: 100%;
     justify-content: center;
   }
+}
+
+.hidden-input {
+  display: none;
+}
+
+.upload-btn {
+  background: rgba(255, 255, 255, 0.9);
+  border: none;
+  border-radius: 8px;
+  padding: 8px 16px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  opacity: 0;
+  z-index: 2;
+}
+
+.cover-photo:hover .upload-btn {
+  opacity: 1;
+  transform: translateY(-4px);
+}
+
+.upload-btn:hover {
+  background: white;
+  transform: translateY(-6px) !important;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+/* Add these new hover effects */
+.cover-photo:hover::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.1);
+  pointer-events: none;
+  transition: all 0.3s ease;
+}
+
+.cover-photo.editing {
+  cursor: pointer;
 }
 </style>
