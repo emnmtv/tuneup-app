@@ -199,10 +199,7 @@
               <i class="material-icons">chat</i>
               Send Message
             </button>
-            <button @click="initiatePayment" class="payment-btn" v-if="post.amount">
-              <i class="material-icons">payment</i>
-              Pay Now
-            </button>
+          
           </div>
     </div>
 
