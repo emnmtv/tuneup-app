@@ -1,7 +1,7 @@
 <script setup>
 import { ref, onMounted, onUnmounted } from "vue";
 import { useRouter } from "vue-router";
-import { loginUser } from "../authService";
+import { loginUser, loginWithGoogle } from "../authService";
 import Swal from 'sweetalert2';
 
 const email = ref("");
@@ -84,6 +84,51 @@ const goToRegister = () => {
   console.log("Navigating to the registration page"); // Log navigation action
   router.push("/register"); // Redirect to Register Page
 };
+
+const handleGoogleLogin = async () => {
+  try {
+    loading.value = true;
+    const auth2 = await window.google.accounts.oauth2.initTokenClient({
+      client_id: '376733759979-q3p24tlbkr4mjurueprliur0sco65s4u.apps.googleusercontent.com', // Replace with your client ID
+      scope: 'email profile',
+      callback: async (response) => {
+        if (response.access_token) {
+          try {
+            const data = await loginWithGoogle(response.access_token);
+            localStorage.setItem("token", data.token);
+            localStorage.setItem("userRole", data.role);
+
+            await Swal.fire({
+              icon: 'success',
+              title: 'Welcome!',
+              text: 'Successfully logged in with Google',
+              timer: 1500,
+              showConfirmButton: false
+            });
+
+            router.push('/dashboard');
+          } catch (error) {
+            Swal.fire({
+              icon: 'error',
+              title: 'Login Failed',
+              text: 'Failed to login with Google. Please try again.',
+            });
+          }
+        }
+      },
+    });
+    auth2.requestAccessToken();
+  } catch (error) {
+    console.error("Google login error:", error);
+    Swal.fire({
+      icon: 'error',
+      title: 'Login Failed',
+      text: 'Failed to initialize Google login. Please try again.',
+    });
+  } finally {
+    loading.value = false;
+  }
+};
 </script>
 
 <template>
@@ -133,6 +178,16 @@ const goToRegister = () => {
           <span v-if="!loading">Sign In</span>
           <div v-else class="loader"></div>
         </button>
+
+        <div class="social-login">
+          <div class="divider">
+            <span>or</span>
+          </div>
+          <button type="button" class="google-btn" @click="handleGoogleLogin">
+            <img src="@/assets/google.png" alt="Google" />
+            Continue with Google
+          </button>
+        </div>
       </form>
 
       <div class="auth-footer">
@@ -343,5 +398,55 @@ const goToRegister = () => {
   .auth-header h1 {
     font-size: 2rem;
   }
+}
+
+.social-login {
+  margin-top: 2rem;
+}
+
+.divider {
+  display: flex;
+  align-items: center;
+  text-align: center;
+  margin: 1rem 0;
+}
+
+.divider::before,
+.divider::after {
+  content: '';
+  flex: 1;
+  border-bottom: 1px solid #ddd;
+}
+
+.divider span {
+  padding: 0 1rem;
+  color: #666;
+  font-size: 0.9rem;
+}
+
+.google-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  width: 100%;
+  padding: 0.75rem;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  background: white;
+  color: #333;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.google-btn:hover {
+  background: #f8f9fa;
+  border-color: #aaa;
+}
+
+.google-btn img {
+  width: 20px;
+  height: 20px;
 }
 </style>

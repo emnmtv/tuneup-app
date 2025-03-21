@@ -853,3 +853,26 @@ export const fetchAllUsers = async () => {
   }
 };
 
+// Add this new function
+export async function loginWithGoogle(accessToken) {
+  try {
+    const response = await fetch(`${BASE_URL}/google-login`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ accessToken }),
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.error || "Failed to login with Google");
+    }
+
+    return await response.json();
+  } catch (error) {
+    console.error("Google login error:", error);
+    throw error;
+  }
+}
+

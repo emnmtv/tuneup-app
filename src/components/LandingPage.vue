@@ -225,7 +225,6 @@ export default {
 .landing-container {
   min-height: 100vh;
   background-color: #ffffff;
-  max-width: auto;
 }
 
 /* Hero Section */
