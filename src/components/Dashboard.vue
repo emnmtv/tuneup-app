@@ -3,7 +3,7 @@
    
 
     <!-- Navigation Filters -->
-    <div class="navigation-filters" v-observe-visibility="handleFilterVisibility">
+    <div class="navigation-filters">
       <div class="main-categories">
         <button 
           class="category-btn all-btn"
@@ -115,27 +115,16 @@
       </div>
     </div>
 
-    <!-- Stats Section with Slide-up -->
-    <div class="stats-section" v-observe-visibility="handleStatsVisibility">
-      <div class="stat-card" v-for="(stat, index) in stats" :key="stat.title"
-           :class="{ 'animate-in': statsVisible }"
-           :style="{ animationDelay: `${index * 0.2}s` }">
-        <i class="material-icons">{{ stat.icon }}</i>
-        <h3>{{ stat.value }}</h3>
-        <p>{{ stat.title }}</p>
-      </div>
-    </div>
-
-    <!-- Featured Posts with Fade-in-up -->
-    <div class="featured-section" v-observe-visibility="handleFeaturedVisibility">
-      <h2 class="section-title" :class="{ 'animate-in': featuredVisible }">Featured Posts</h2>
+    <!-- Featured Posts Section -->
+    <div class="featured-section" v-if="featuredPosts.length">
+      <h2>Featured Posts</h2>
       <div class="featured-posts">
-        <div v-for="(post, index) in featuredPosts" 
-             :key="post.id"
-             class="featured-post-card"
-             :class="{ 'animate-in': featuredVisible }"
-             :style="{ animationDelay: `${index * 0.15}s` }"
-             @click="navigateToPost(post.id)">
+        <div 
+          v-for="post in featuredPosts" 
+          :key="post.id"
+          class="featured-post-card"
+          @click="navigateToPost(post.id)"
+        >
           <div class="featured-image">
             <img :src="post.image" :alt="post.title" />
             <div class="featured-badge">
@@ -169,15 +158,13 @@
     </div>
 
     <!-- Main Posts Grid -->
-    <div class="posts-grid" v-observe-visibility="handlePostsVisibility">
+    <div class="posts-section">
       <h2>All Posts</h2>
       <div class="posts-grid">
         <div 
-          v-for="(post, index) in filteredPosts" 
-          :key="post.id"
-          class="post-card"
-          :class="{ 'animate-in': postsVisible }"
-          :style="{ animationDelay: `${index * 0.1}s` }"
+          v-for="post in filteredPosts" 
+      :key="post.id"
+      class="post-card"
           @click="navigateToPost(post.id)"
         >
           <div class="post-media">
@@ -185,19 +172,19 @@
             <div class="post-price" v-if="post.amount">
               ₱{{ formatAmount(post.amount) }}
             </div>
-          </div>
-          
-          <div class="post-content">
-            <h3 class="post-title">{{ post.title }}</h3>
-            <p class="post-description">{{ post.description }}</p>
-            
+      </div>
+      
+      <div class="post-content">
+        <h3 class="post-title">{{ post.title }}</h3>
+        <p class="post-description">{{ post.description }}</p>
+        
             <div class="post-footer">
               <div class="creator-info">
                 <div class="creator-avatar">
                   {{ getInitials(post.user.firstName, post.user.lastName) }}
                 </div>
                 <div class="creator-details">
-                  <h4>{{ post.user.firstName }} {{ post.user.lastName }}</h4>
+          <h4>{{ post.user.firstName }} {{ post.user.lastName }}</h4>
                   <div class="profession-details">
                     <span class="profession" v-if="post.user.creatorProfile?.typeOfProfession">
                       {{ post.user.creatorProfile?.typeOfProfession }}
@@ -215,7 +202,7 @@
           </div>
         </div>
       </div>
-    </div>
+  </div>
   </div>
 </template>
 
@@ -229,12 +216,11 @@ export default {
       featuredPosts: [],
       searchQuery: '',
       sortBy: 'recent',
-      stats: [
-        { icon: 'group', value: '1,234', title: 'Active Musicians' },
-        { icon: 'handshake', value: '567', title: 'Collaborations' },
-        { icon: 'music_note', value: '89', title: 'Music Genres' },
-        { icon: 'post_add', value: '2,345', title: 'Total Posts' }
-      ],
+      stats: {
+        creators: 0,
+        posts: 0,
+        services: 0
+      },
       error: null,
       isDropdownOpen: false,
       selectedCategory: null,
@@ -399,10 +385,7 @@ export default {
         'Accordion',
         'Synthesizer',
         'Ukulele'
-      ],
-      statsVisible: false,
-      featuredVisible: false,
-      postsVisible: false
+      ]
     };
   },
   computed: {
@@ -543,15 +526,6 @@ export default {
       this.selectedGenre = null;
       this.isDropdownOpen = false;
       this.filterPosts();
-    },
-    handleStatsVisibility(isVisible) {
-      if (isVisible) this.statsVisible = true;
-    },
-    handleFeaturedVisibility(isVisible) {
-      if (isVisible) this.featuredVisible = true;
-    },
-    handlePostsVisibility(isVisible) {
-      if (isVisible) this.postsVisible = true;
     }
   }
 };
@@ -1036,183 +1010,5 @@ export default {
   background: #2e7d32;
   color: white;
   border-color: #2e7d32;
-}
-
-/* Base Animation Classes */
-@keyframes fadeInUp {
-  from {
-    opacity: 0;
-    transform: translateY(30px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-@keyframes slideInRight {
-  from {
-    opacity: 0;
-    transform: translateX(30px);
-  }
-  to {
-    opacity: 1;
-    transform: translateX(0);
-  }
-}
-
-@keyframes scaleIn {
-  from {
-    opacity: 0;
-    transform: scale(0.9);
-  }
-  to {
-    opacity: 1;
-    transform: scale(1);
-  }
-}
-
-/* Stats Section */
-.stat-card {
-  opacity: 0;
-  transform: translateY(30px);
-}
-
-.stat-card.animate-in {
-  animation: fadeInUp 0.6s ease forwards;
-}
-
-/* Featured Section */
-.section-title {
-  opacity: 0;
-  transform: translateY(20px);
-}
-
-.section-title.animate-in {
-  animation: fadeInUp 0.5s ease forwards;
-}
-
-.featured-post-card {
-  opacity: 0;
-  transform: translateY(30px);
-}
-
-.featured-post-card.animate-in {
-  animation: fadeInUp 0.6s ease forwards;
-}
-
-/* Posts Grid */
-.post-card {
-  opacity: 0;
-  transform: scale(0.9);
-}
-
-.post-card.animate-in {
-  animation: scaleIn 0.5s ease forwards;
-}
-
-/* Enhanced Card Hover Effects */
-.post-card {
-  transition: all 0.3s ease;
-}
-
-.post-card:hover {
-  transform: translateY(-5px) scale(1.02);
-  box-shadow: 0 10px 20px rgba(0,0,0,0.1);
-}
-
-/* Navigation Filters Animation */
-.navigation-filters {
-  opacity: 0;
-  transform: translateY(-20px);
-  animation: fadeInUp 0.5s ease forwards;
-}
-
-/* Responsive Animations */
-@media (prefers-reduced-motion: reduce) {
-  .stat-card,
-  .featured-post-card,
-  .post-card,
-  .section-title {
-    animation: none !important;
-    opacity: 1 !important;
-    transform: none !important;
-  }
-}
-
-/* Loading State Animation */
-@keyframes shimmer {
-  0% {
-    background-position: -200% 0;
-  }
-  100% {
-    background-position: 200% 0;
-  }
-}
-
-.loading-skeleton {
-  background: linear-gradient(90deg, 
-    #f0f0f0 25%, 
-    #e0e0e0 50%, 
-    #f0f0f0 75%
-  );
-  background-size: 200% 100%;
-  animation: shimmer 1.5s infinite;
-}
-
-/* Smooth Transitions */
-.posts-grid {
-  transition: all 0.3s ease;
-}
-
-.filter-change-enter-active,
-.filter-change-leave-active {
-  transition: all 0.3s ease;
-}
-
-.filter-change-enter-from,
-.filter-change-leave-to {
-  opacity: 0;
-  transform: translateY(30px);
-}
-
-/* Stats Cards Enhanced Design */
-.stat-card {
-  background: white;
-  border-radius: 12px;
-  padding: 1.5rem;
-  box-shadow: 0 4px 6px rgba(0,0,0,0.05);
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 1rem;
-}
-
-.stat-card i {
-  font-size: 2.5rem;
-  color: #2196f3;
-}
-
-.stat-card h3 {
-  font-size: 2rem;
-  color: #333;
-  margin: 0;
-}
-
-.stat-card p {
-  color: #666;
-  margin: 0;
-}
-
-/* Section Transitions */
-.section-transition-enter-active,
-.section-transition-leave-active {
-  transition: opacity 0.5s ease, transform 0.5s ease;
-}
-
-.section-transition-enter-from,
-.section-transition-leave-to {
-  opacity: 0;
-  transform: translateY(20px);
 }
 </style>

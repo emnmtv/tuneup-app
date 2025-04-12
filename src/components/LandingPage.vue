@@ -5,15 +5,15 @@
       <div class="hero-overlay"></div>
       <div class="hero-content">
         <div class="hero-text">
-          <h1>Discover & Connect with Musicians</h1>
-          <p class="hero-subtitle">Join the community of talented artists, producers, and music enthusiasts</p>
+          <h1>Discover & Connect<br><span class="highlight">with Musicians</span></h1>
+          <p class="hero-subtitle">Join our community of talented artists, producers, and music enthusiasts around the world</p>
           <div class="hero-buttons">
             <button class="primary-btn" @click="$router.push('/login')">
               <i class="material-icons">login</i>
               Get Started
             </button>
             <button class="secondary-btn" @click="$router.push('/register')">
-              Learn More
+              Join TuneUp
               <i class="material-icons">arrow_forward</i>
             </button>
           </div>
@@ -22,19 +22,35 @@
           <img src="@/assets/slash.jpg" alt="Music" />
         </div>
       </div>
+      
+      <!-- Wave separator -->
+      <div class="wave-separator">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1440 320">
+          <path fill="#ffffff" fill-opacity="1" d="M0,96L48,112C96,128,192,160,288,160C384,160,480,128,576,122.7C672,117,768,139,864,149.3C960,160,1056,160,1152,144C1248,128,1344,96,1392,80L1440,64L1440,320L1392,320C1344,320,1248,320,1152,320C1056,320,960,320,864,320C768,320,672,320,576,320C480,320,384,320,288,320C192,320,96,320,48,320L0,320Z"></path>
+        </svg>
+      </div>
     </div>
 
     <!-- Stats Section -->
     <div class="stats-section">
       <div class="stat-item">
+        <div class="stat-icon">
+          <i class="material-icons">people</i>
+        </div>
         <h3>1000+</h3>
         <p>Active Musicians</p>
       </div>
       <div class="stat-item">
+        <div class="stat-icon">
+          <i class="material-icons">handshake</i>
+        </div>
         <h3>500+</h3>
         <p>Collaborations</p>
       </div>
       <div class="stat-item">
+        <div class="stat-icon">
+          <i class="material-icons">music_note</i>
+        </div>
         <h3>50+</h3>
         <p>Music Genres</p>
       </div>
@@ -43,14 +59,14 @@
     <!-- Featured Artists Section -->
     <div class="featured-section">
       <div class="section-header">
-        <h2>Featured Artists</h2>
+        <h2>Featured <span class="highlight">Artists</span></h2>
         <p>Discover amazing talents in our community</p>
       </div>
 
       <div class="posts-carousel">
         <div class="posts-track">
           <div
-            v-for="post in posts"
+            v-for="post in posts.slice(0, 3)"
             :key="post.id"
             class="post-card"
             @click="handlePostClick(post.id)"
@@ -102,35 +118,42 @@
 
     <!-- Features Section -->
     <div class="features-section">
+      <div class="section-header">
+        <h2>Why Choose <span class="highlight">TuneUp</span>?</h2>
+        <p>The platform that connects musicians and fans worldwide</p>
+      </div>
+      
       <div class="features-content">
-        <div class="features-text">
-          <h2>Why Choose TuneUp?</h2>
-          <div class="feature-list">
-            <div class="feature-item">
-              <i class="material-icons">group</i>
-              <div class="feature-details">
-                <h3>Connect with Musicians</h3>
-                <p>Find and collaborate with talented artists worldwide</p>
-              </div>
-            </div>
-            <div class="feature-item">
-              <i class="material-icons">workspace_premium</i>
-              <div class="feature-details">
-                <h3>Quality Services</h3>
-                <p>Access professional music services and expertise</p>
-              </div>
-            </div>
-            <div class="feature-item">
-              <i class="material-icons">payments</i>
-              <div class="feature-details">
-                <h3>Secure Payments</h3>
-                <p>Safe and reliable payment processing</p>
-              </div>
-            </div>
+        <div class="feature-card">
+          <div class="feature-icon">
+            <i class="material-icons">group</i>
           </div>
+          <h3>Connect with Musicians</h3>
+          <p>Find and collaborate with talented artists worldwide</p>
         </div>
-        <div class="features-image">
-          <img src="@/assets/slash.jpg" alt="Features" />
+        
+        <div class="feature-card">
+          <div class="feature-icon">
+            <i class="material-icons">workspace_premium</i>
+          </div>
+          <h3>Quality Services</h3>
+          <p>Access professional music services and expertise</p>
+        </div>
+        
+        <div class="feature-card">
+          <div class="feature-icon">
+            <i class="material-icons">payments</i>
+          </div>
+          <h3>Secure Payments</h3>
+          <p>Safe and reliable payment processing</p>
+        </div>
+        
+        <div class="feature-card">
+          <div class="feature-icon">
+            <i class="material-icons">emoji_events</i>
+          </div>
+          <h3>Quality Talent</h3>
+          <p>Work with the best musicians in your genre</p>
         </div>
       </div>
     </div>
@@ -140,13 +163,57 @@
       <div class="cta-content">
         <h2>Ready to Start Your Musical Journey?</h2>
         <p>Join TuneUp today and connect with amazing musicians</p>
-        <button class="cta-button" @click="$router.push('/register')">
-          Get Started Now
-          <i class="material-icons">arrow_forward</i>
-        </button>
+        <div class="cta-buttons">
+          <button class="cta-button primary" @click="$router.push('/register')">
+            Sign Up Free
+            <i class="material-icons">arrow_forward</i>
+          </button>
+          <button class="cta-button secondary" @click="$router.push('/login')">
+            Login
+            <i class="material-icons">login</i>
+          </button>
+        </div>
       </div>
-      <div class="cta-pattern"></div>
     </div>
+    
+    <!-- Footer -->
+    <footer class="landing-footer">
+      <div class="footer-content">
+        <div class="footer-logo">
+          <h2>TuneUp</h2>
+          <p>Connecting Musicians Worldwide</p>
+        </div>
+        <div class="footer-links">
+          <div class="link-group">
+            <h3>Platform</h3>
+            <ul>
+              <li>Features</li>
+              <li>Security</li>
+              <li>Pricing</li>
+            </ul>
+          </div>
+          <div class="link-group">
+            <h3>Community</h3>
+            <ul>
+              <li>Artists</li>
+              <li>Producers</li>
+              <li>Venues</li>
+            </ul>
+          </div>
+          <div class="link-group">
+            <h3>Support</h3>
+            <ul>
+              <li>Help Center</li>
+              <li>Contact Us</li>
+              <li>Privacy Policy</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+      <div class="footer-bottom">
+        <p>&copy; 2023 TuneUp. All rights reserved.</p>
+      </div>
+    </footer>
   </div>
 </template>
 
@@ -225,15 +292,16 @@ export default {
 .landing-container {
   min-height: 100vh;
   background-color: #ffffff;
+  overflow-x: hidden;
 }
 
 /* Hero Section */
 .hero-section {
   position: relative;
-  min-height: 85vh;
-  background: linear-gradient(135deg, #1a237e, #0d47a1);
+  min-height: 90vh;
+  background: linear-gradient(135deg, #1a237e, #311b92);
   overflow: hidden;
-  padding: 4rem 2rem;
+  padding: 0;
 }
 
 .hero-overlay {
@@ -243,7 +311,15 @@ export default {
   right: 0;
   bottom: 0;
   background: url('@/assets/slash.jpg') center/cover;
-  opacity: 0.1;
+  opacity: 0.15;
+}
+
+.wave-separator {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  line-height: 0;
 }
 
 .hero-content {
@@ -255,6 +331,8 @@ export default {
   align-items: center;
   position: relative;
   z-index: 1;
+  padding: 5rem 2rem;
+  height: 90vh;
 }
 
 .hero-text {
@@ -263,15 +341,22 @@ export default {
 
 .hero-text h1 {
   font-size: 4rem;
-  font-weight: 700;
+  font-weight: 800;
   line-height: 1.2;
   margin-bottom: 1.5rem;
+}
+
+.highlight {
+  color: #64ffda;
+  position: relative;
 }
 
 .hero-subtitle {
   font-size: 1.5rem;
   opacity: 0.9;
   margin-bottom: 2.5rem;
+  max-width: 600px;
+  line-height: 1.6;
 }
 
 .hero-buttons {
@@ -281,7 +366,7 @@ export default {
 
 .primary-btn, .secondary-btn {
   padding: 1rem 2rem;
-  border-radius: 8px;
+  border-radius: 50px;
   font-size: 1.1rem;
   font-weight: 600;
   display: flex;
@@ -289,11 +374,12 @@ export default {
   gap: 0.5rem;
   cursor: pointer;
   transition: all 0.3s ease;
+  box-shadow: 0 4px 15px rgba(0,0,0,0.2);
 }
 
 .primary-btn {
-  background: #00c853;
-  color: white;
+  background: #64ffda;
+  color: #1a237e;
   border: none;
 }
 
@@ -305,12 +391,24 @@ export default {
 
 .primary-btn:hover {
   background: #00e676;
-  transform: translateY(-2px);
+  transform: translateY(-3px);
+  box-shadow: 0 8px 20px rgba(0,0,0,0.25);
 }
 
 .secondary-btn:hover {
   border-color: white;
-  transform: translateY(-2px);
+  transform: translateY(-3px);
+  box-shadow: 0 8px 20px rgba(0,0,0,0.25);
+}
+
+.hero-image img {
+  width: 100%;
+  height: auto;
+  max-height: 500px;
+  object-fit: cover;
+  border-radius: 20px;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+  transform: rotate(2deg);
 }
 
 /* Stats Section */
@@ -318,18 +416,42 @@ export default {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   max-width: 1200px;
-  margin: -50px auto 0;
-  padding: 2rem;
-  background: white;
-  border-radius: 16px;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
-  position: relative;
-  z-index: 2;
+  margin: 3rem auto;
+  padding: 0 2rem;
+  gap: 2rem;
 }
 
 .stat-item {
   text-align: center;
   padding: 2rem;
+  background: white;
+  border-radius: 20px;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.05);
+  transition: transform 0.3s, box-shadow 0.3s;
+}
+
+.stat-item:hover {
+  transform: translateY(-10px);
+  box-shadow: 0 15px 35px rgba(0, 0, 0, 0.1);
+}
+
+.stat-icon {
+  font-size: 2.5rem;
+  margin-bottom: 1rem;
+  color: #1a237e;
+  background: rgba(100, 255, 218, 0.2);
+  height: 80px;
+  width: 80px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  margin: 0 auto 1.5rem;
+}
+
+.stat-icon i {
+  font-size: 2.5rem;
+  color: #311b92;
 }
 
 .stat-item h3 {
@@ -345,8 +467,8 @@ export default {
 
 /* Featured Section */
 .featured-section {
-  padding: 6rem 2rem;
-  background: #f8f9fa;
+  padding: 5rem 2rem;
+  background: #f9fafb;
 }
 
 .section-header {
@@ -358,37 +480,37 @@ export default {
   font-size: 2.5rem;
   color: #1a237e;
   margin-bottom: 1rem;
+  font-weight: 700;
 }
 
 .posts-carousel {
   max-width: 1400px;
   margin: 0 auto;
-  overflow: hidden;
 }
 
 .posts-track {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
   gap: 2rem;
 }
 
 .post-card {
   background: white;
-  border-radius: 12px;
+  border-radius: 16px;
   overflow: hidden;
-  box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+  box-shadow: 0 10px 20px rgba(0,0,0,0.1);
   transition: transform 0.3s, box-shadow 0.3s;
   cursor: pointer;
 }
 
 .post-card:hover {
-  transform: translateY(-5px);
-  box-shadow: 0 8px 15px rgba(0,0,0,0.15);
+  transform: translateY(-10px);
+  box-shadow: 0 15px 30px rgba(0,0,0,0.15);
 }
 
 .post-media {
   position: relative;
-  height: 200px;
+  height: 220px;
 }
 
 .post-image {
@@ -399,19 +521,20 @@ export default {
 
 .post-price {
   position: absolute;
-  top: 10px;
-  right: 10px;
-  background: rgba(0, 0, 0, 0.5);
+  top: 15px;
+  right: 15px;
+  background: rgba(49, 27, 146, 0.8);
   color: white;
-  padding: 0.25rem 0.5rem;
-  border-radius: 10px;
-  font-size: 0.9rem;
+  padding: 0.5rem 1rem;
+  border-radius: 50px;
+  font-size: 1rem;
+  font-weight: 600;
 }
 
 .post-overlay {
   position: absolute;
   inset: 0;
-  background: rgba(0,0,0,0.5);
+  background: rgba(26, 35, 126, 0.6);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -426,13 +549,28 @@ export default {
 .overlay-content {
   color: white;
   font-weight: 600;
-  padding: 0.5rem 1rem;
+  padding: 0.75rem 1.5rem;
   border: 2px solid white;
-  border-radius: 20px;
+  border-radius: 50px;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
 }
 
 .post-content {
   padding: 1.5rem;
+}
+
+.post-title {
+  font-size: 1.4rem;
+  margin-bottom: 0.75rem;
+  color: #1a237e;
+}
+
+.post-description {
+  color: #666;
+  line-height: 1.6;
+  margin-bottom: 1.5rem;
 }
 
 .post-footer {
@@ -453,7 +591,7 @@ export default {
 .user-avatar {
   width: 40px;
   height: 40px;
-  background: #2196f3;
+  background: #311b92;
   color: white;
   border-radius: 50%;
   display: flex;
@@ -471,142 +609,268 @@ export default {
 .user-tags {
   display: flex;
   gap: 0.5rem;
+  margin-top: 0.25rem;
+}
+
+.profession, .genre {
+  padding: 0.25rem 0.75rem;
+  border-radius: 50px;
+  font-size: 0.75rem;
+  font-weight: 500;
 }
 
 .profession {
-  background: #e3f2fd;
-  color: #2196f3;
-  padding: 0.25rem 0.75rem;
-  border-radius: 15px;
-  font-size: 0.8rem;
-  font-weight: 500;
+  background: rgba(100, 255, 218, 0.2);
+  color: #1a237e;
 }
 
 .genre {
-  background: #e3f2fd;
-  color: #2196f3;
-  padding: 0.25rem 0.75rem;
-  border-radius: 15px;
-  font-size: 0.8rem;
-  font-weight: 500;
+  background: rgba(49, 27, 146, 0.1);
+  color: #311b92;
 }
 
+/* Features Section */
 .features-section {
-  padding: 6rem 2rem;
+  padding: 5rem 2rem;
   background: white;
 }
 
 .features-content {
-  max-width: 1400px;
+  max-width: 1200px;
   margin: 0 auto;
   display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 4rem;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 2rem;
 }
 
-.features-text {
-  color: #333;
+.feature-card {
+  padding: 2.5rem 2rem;
+  background: white;
+  border-radius: 16px;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.05);
+  text-align: center;
+  transition: transform 0.3s, box-shadow 0.3s;
 }
 
-.feature-list {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 1rem;
+.feature-card:hover {
+  transform: translateY(-10px);
+  box-shadow: 0 20px 40px rgba(0,0,0,0.1);
 }
 
-.feature-item {
+.feature-icon {
+  width: 80px;
+  height: 80px;
+  margin: 0 auto 1.5rem;
+  background: rgba(100, 255, 218, 0.2);
+  border-radius: 50%;
   display: flex;
   align-items: center;
-  gap: 1rem;
+  justify-content: center;
 }
 
-.feature-item i {
-  font-size: 2rem;
-  color: #2196f3;
+.feature-icon i {
+  font-size: 2.5rem;
+  color: #311b92;
 }
 
-.feature-details {
-  flex: 1;
-}
-
-.feature-details h3 {
+.feature-card h3 {
   font-size: 1.5rem;
-  margin-bottom: 0.5rem;
+  margin-bottom: 1rem;
+  color: #1a237e;
 }
 
-.feature-details p {
-  font-size: 1.1rem;
+.feature-card p {
+  color: #666;
+  line-height: 1.6;
 }
 
-.features-image {
-  text-align: right;
-}
-
-.features-image img {
-  max-width: 100%;
-  height: auto;
-}
-
+/* CTA Section */
 .cta-section {
-  padding: 6rem 2rem;
-  background: linear-gradient(135deg, #1565c0, #0d47a1);
+  padding: 5rem 2rem;
+  background: linear-gradient(135deg, #1a237e, #311b92);
   color: white;
+  position: relative;
+  overflow: hidden;
 }
 
 .cta-content {
-  max-width: 1400px;
+  max-width: 900px;
   margin: 0 auto;
   text-align: center;
+  position: relative;
+  z-index: 1;
 }
 
 .cta-content h2 {
   font-size: 2.5rem;
   margin-bottom: 1rem;
+  font-weight: 700;
 }
 
 .cta-content p {
   font-size: 1.5rem;
-  margin-bottom: 2rem;
+  margin-bottom: 2.5rem;
+  opacity: 0.9;
+}
+
+.cta-buttons {
+  display: flex;
+  justify-content: center;
+  gap: 1.5rem;
 }
 
 .cta-button {
-  background: white;
-  color: #2196f3;
   padding: 1rem 2.5rem;
-  border: none;
-  border-radius: 30px;
+  border-radius: 50px;
   font-size: 1.2rem;
   font-weight: 600;
   cursor: pointer;
-  transition: transform 0.2s;
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  box-shadow: 0 10px 20px rgba(0,0,0,0.2);
+}
+
+.cta-button.primary {
+  background: #64ffda;
+  color: #1a237e;
+  border: none;
+}
+
+.cta-button.secondary {
+  background: transparent;
+  color: white;
+  border: 2px solid rgba(255, 255, 255, 0.5);
 }
 
 .cta-button:hover {
-  transform: translateY(-2px);
+  transform: translateY(-5px);
+  box-shadow: 0 15px 30px rgba(0,0,0,0.25);
 }
 
-.cta-pattern {
-  height: 100px;
-  background: url('@/assets/mini.jpg') repeat-x;
+.cta-button.primary:hover {
+  background: #00e676;
 }
 
-@media (max-width: 1024px) {
+.cta-button.secondary:hover {
+  border-color: white;
+}
+
+/* Footer */
+.landing-footer {
+  background: #0d1b42;
+  padding: 4rem 2rem 2rem;
+  color: white;
+}
+
+.footer-content {
+  max-width: 1200px;
+  margin: 0 auto;
+  display: flex;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 3rem;
+}
+
+.footer-logo h2 {
+  font-size: 2rem;
+  margin-bottom: 0.5rem;
+}
+
+.footer-logo p {
+  color: rgba(255,255,255,0.7);
+}
+
+.footer-links {
+  display: flex;
+  gap: 3rem;
+  flex-wrap: wrap;
+}
+
+.link-group h3 {
+  font-size: 1.2rem;
+  margin-bottom: 1.5rem;
+  color: #64ffda;
+}
+
+.link-group ul {
+  padding: 0;
+  list-style: none;
+}
+
+.link-group li {
+  margin-bottom: 0.75rem;
+  color: rgba(255,255,255,0.7);
+  cursor: pointer;
+  transition: color 0.2s;
+}
+
+.link-group li:hover {
+  color: white;
+}
+
+.footer-bottom {
+  max-width: 1200px;
+  margin: 3rem auto 0;
+  padding-top: 1.5rem;
+  border-top: 1px solid rgba(255,255,255,0.1);
+  text-align: center;
+  color: rgba(255,255,255,0.5);
+}
+
+/* Responsive Styles */
+@media (max-width: 1200px) {
+  .hero-content, .stats-section, .features-content, .footer-content {
+    max-width: 95%;
+  }
+  
+  .hero-text h1 {
+    font-size: 3.5rem;
+  }
+}
+
+@media (max-width: 992px) {
   .hero-content {
     grid-template-columns: 1fr;
     text-align: center;
+    height: auto;
+    padding: 5rem 2rem 8rem;
   }
-
+  
+  .hero-text h1 {
+    font-size: 3rem;
+  }
+  
+  .hero-subtitle {
+    margin: 0 auto 2.5rem;
+  }
+  
   .hero-buttons {
     justify-content: center;
   }
-
+  
   .hero-image {
     display: none;
   }
-
+  
   .stats-section {
-    grid-template-columns: 1fr;
-    margin: 0 1rem;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    margin-top: -3rem;
+  }
+  
+  .features-content {
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  }
+  
+  .footer-content {
+    flex-direction: column;
+    gap: 2rem;
+  }
+  
+  .footer-links {
+    justify-content: space-between;
+    width: 100%;
   }
 }
 
@@ -614,17 +878,69 @@ export default {
   .hero-text h1 {
     font-size: 2.5rem;
   }
-
+  
   .hero-subtitle {
     font-size: 1.2rem;
   }
-
-  .features-content {
+  
+  .section-header h2 {
+    font-size: 2rem;
+  }
+  
+  .cta-content h2 {
+    font-size: 2rem;
+  }
+  
+  .cta-content p {
+    font-size: 1.2rem;
+  }
+  
+  .cta-buttons {
+    flex-direction: column;
+    align-items: center;
+    gap: 1rem;
+  }
+  
+  .cta-button {
+    width: 100%;
+    justify-content: center;
+  }
+  
+  .posts-track {
     grid-template-columns: 1fr;
   }
+  
+  .footer-links {
+    flex-direction: column;
+    gap: 2rem;
+  }
+}
 
-  .features-image {
-    display: none;
+@media (max-width: 576px) {
+  .hero-section {
+    min-height: auto;
+  }
+  
+  .hero-text h1 {
+    font-size: 2rem;
+  }
+  
+  .hero-buttons {
+    flex-direction: column;
+    width: 100%;
+  }
+  
+  .primary-btn, .secondary-btn {
+    width: 100%;
+    justify-content: center;
+  }
+  
+  .stat-item {
+    padding: 1.5rem;
+  }
+  
+  .featured-section, .features-section, .cta-section {
+    padding: 3rem 1rem;
   }
 }
 </style>

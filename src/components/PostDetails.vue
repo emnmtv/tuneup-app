@@ -306,7 +306,7 @@
 </template>
 
 <script>
-import { fetchPostDetails, sendMessage, fetchCreatorRatings } from '../authService.js';
+import { fetchPostDetails, sendMessage, fetchCreatorRatingsById } from '../authService.js';
 import Swal from 'sweetalert2';
 import { ref } from 'vue';
 
@@ -467,8 +467,8 @@ export default {
     },
     async fetchRatings() {
       try {
-        if (this.post && this.post.userId) {
-          const ratings = await fetchCreatorRatings(this.post.userId);
+        if (this.post && this.post.user && this.post.user.id) {
+          const ratings = await fetchCreatorRatingsById(this.post.user.id);
           this.creatorRatings = ratings;
         }
       } catch (error) {

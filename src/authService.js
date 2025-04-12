@@ -727,6 +727,34 @@ export const fetchCreatorRatings = async () => {
   }
 };
 
+// New function to fetch ratings for any creator by ID
+export const fetchCreatorRatingsById = async (creatorId) => {
+  const token = localStorage.getItem('token');
+  
+  if (!token) {
+    throw new Error('No authentication token found');
+  }
+
+  try {
+    const response = await fetch(`${BASE_URL}/ratings/${creatorId}`, {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      }
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.error || 'Failed to fetch ratings');
+    }
+
+    return await response.json();
+  } catch (error) {
+    throw new Error(`Failed to fetch ratings: ${error.message}`);
+  }
+};
+
 // Function to approve/reject post (admin only)
 export const updatePostStatus = async (postId, status) => {
   const token = localStorage.getItem('token');
