@@ -115,6 +115,37 @@
               </button>
             </div>
           </div>
+
+          <!-- Audio Upload -->
+          <div class="upload-group">
+            <label class="upload-label" :class="{ 'has-file': audio }">
+              <i class="material-icons">{{ audio ? 'check_circle' : 'audiotrack' }}</i>
+              <span>{{ audio ? 'Audio Selected' : 'Upload Audio' }}</span>
+              <input 
+                type="file" 
+                @change="handleAudioUpload" 
+                accept="audio/*"
+                class="file-input"
+              />
+            </label>
+            <div class="file-size-warning">
+              <i class="material-icons warning-icon">warning</i>
+              Maximum file size: 20MB. Please compress larger files before uploading.
+            </div>
+            <div v-if="audio" class="preview audio-preview">
+              <audio :src="audioPreview" controls class="audio-player"></audio>
+              <div class="audio-info">
+                <span class="audio-filename">{{ audio.name }}</span>
+                <p class="audio-note">
+                  <i class="material-icons info-icon">info</i>
+                  Audio files will be automatically checked for copyright
+                </p>
+              </div>
+              <button type="button" @click="removeAudio" class="remove-btn">
+                <i class="material-icons">close</i>
+              </button>
+            </div>
+          </div>
         </div>
 
         <!-- Submit Button -->
@@ -147,8 +178,10 @@ export default {
     const remarks = ref('');
     const image = ref(null);
     const video = ref(null);
+    const audio = ref(null);
     const imagePreview = ref('');
     const videoPreview = ref('');
+    const audioPreview = ref('');
     const isSubmitting = ref(false);
 
     const handleImageUpload = (event) => {
@@ -167,6 +200,27 @@ export default {
       }
     };
 
+    const handleAudioUpload = (event) => {
+      const file = event.target.files[0];
+      if (file) {
+        // Check file size - limit to 20MB
+        const maxSize = 20 * 1024 * 1024; // 20MB in bytes
+        if (file.size > maxSize) {
+          Swal.fire({
+            title: 'File Too Large',
+            text: 'Audio file exceeds the 20MB limit. Please compress the file or choose a smaller one.',
+            icon: 'error',
+            confirmButtonText: 'OK'
+          });
+          event.target.value = ''; // Reset the input
+          return;
+        }
+        
+        audio.value = file;
+        audioPreview.value = URL.createObjectURL(file);
+      }
+    };
+
     const removeImage = () => {
       image.value = null;
       imagePreview.value = '';
@@ -175,6 +229,11 @@ export default {
     const removeVideo = () => {
       video.value = null;
       videoPreview.value = '';
+    };
+
+    const removeAudio = () => {
+      audio.value = null;
+      audioPreview.value = '';
     };
 
     const resetForm = async () => {
@@ -197,6 +256,7 @@ export default {
         remarks.value = '';
         removeImage();
         removeVideo();
+        removeAudio();
       }
     };
 
@@ -204,16 +264,36 @@ export default {
       try {
         isSubmitting.value = true;
 
+        // Validate required fields
+        if (!title.value || !title.value.trim()) {
+          Swal.fire({
+            title: 'Error',
+            text: 'Please enter a title for your post',
+            icon: 'error'
+          });
+          isSubmitting.value = false;
+          return;
+        }
+
+        if (!description.value || !description.value.trim()) {
+          Swal.fire({
+            title: 'Error',
+            text: 'Please enter a description for your post',
+            icon: 'error'
+          });
+          isSubmitting.value = false;
+          return;
+        }
+
         // Confirm submission
         const result = await Swal.fire({
           title: 'Create Post?',
-          text: 'Are you sure you want to create this post?',
+          text: audio.value ? 'Audio files will be scanned for copyright. This process may take a moment.' : 'Ready to publish your post?',
           icon: 'question',
           showCancelButton: true,
-          confirmButtonText: 'Yes, create it',
-          cancelButtonText: 'No, review again',
-          confirmButtonColor: '#2196f3',
-          cancelButtonColor: '#6c757d'
+          confirmButtonText: 'Create',
+          cancelButtonText: 'Cancel',
+          confirmButtonColor: '#2196f3'
         });
 
         if (!result.isConfirmed) {
@@ -221,40 +301,153 @@ export default {
           return;
         }
 
-        const postData = {
-          title: title.value,
-          description: description.value,
-          detailedDescription: detailedDescription.value,
-          amount: amount.value,
-          remarks: remarks.value,
-          image: image.value,
-          video: video.value,
-        };
+        // Log the form data for debugging
+        console.log('Submitting post with title:', title.value);
+        console.log('Submitting post with description:', description.value);
 
-        await createPost(postData);
+        const formData = new FormData();
+        formData.append('title', title.value.trim());
+        formData.append('description', description.value.trim());
+        
+        if (detailedDescription.value) {
+          formData.append('detailedDescription', detailedDescription.value);
+        }
+        
+        if (amount.value) {
+          formData.append('amount', amount.value.toString());
+        }
+        
+        if (remarks.value) {
+          formData.append('remarks', remarks.value);
+        }
+        
+        if (image.value) {
+          formData.append('image', image.value);
+        }
+        
+        if (video.value) {
+          formData.append('video', video.value);
+        }
+        
+        if (audio.value) {
+          formData.append('audio', audio.value);
+        }
 
-        await Swal.fire({
-          icon: 'success',
-          title: 'Post Created!',
-          text: 'Your post has been created successfully.',
-          timer: 2000,
-          showConfirmButton: false
-        });
+        // Double check form data before sending
+        console.log('Form data contents:');
+        for (let [key, value] of formData.entries()) {
+          console.log(`${key}: ${value}`);
+        }
 
-        // Reset form after successful submission
-        title.value = '';
-        description.value = '';
-        detailedDescription.value = '';
-        amount.value = null;
-        remarks.value = '';
-        removeImage();
-        removeVideo();
+        const response = await createPost(formData);
+        
+        // Make sure response has expected structure
+        if (!response) {
+          throw new Error('Invalid response from server');
+        }
+        
+        // Get the post data - should be in response.post now
+        const postData = response.post;
+        
+        // Check for copyright detection warning
+        let copyrightMessage = '';
+        
+        if (postData && postData.copyrightInfo) {
+          try {
+            // Handle potentially truncated or malformed JSON
+            let copyright;
+            try {
+              // Try to parse the JSON normally first
+              copyright = typeof postData.copyrightInfo === 'string' 
+                ? JSON.parse(postData.copyrightInfo) 
+                : postData.copyrightInfo;
+            } catch (jsonError) {
+              console.error('Error parsing copyright info JSON:', jsonError);
+              // If that fails, extract the song info from the truncated JSON if possible
+              const songMatch = postData.copyrightInfo.match(/"title":"([^"]+)","artist":"([^"]+)"/);
+              if (songMatch) {
+                copyright = {
+                  isDetected: true,
+                  songInfo: {
+                    title: songMatch[1] || 'Unknown',
+                    artist: songMatch[2] || 'Unknown',
+                  }
+                };
+              } else {
+                // If we can't even extract partial info, just return a placeholder
+                copyright = {
+                  isDetected: true,
+                  songInfo: {
+                    title: 'Unknown Song',
+                    artist: 'Unknown Artist',
+                  },
+                  error: 'Incomplete copyright data'
+                };
+              }
+            }
+              
+            if (copyright.isDetected) {
+              copyrightMessage = `
+                <div class="copyright-alert">
+                  <p><strong>Copyright detected in audio:</strong></p>
+                  <p>${copyright.songInfo?.title || 'Unknown'} by ${copyright.songInfo?.artist || 'Unknown'}</p>
+                  <p class="copyright-warning">Please ensure you have rights to use this audio.</p>
+                </div>
+              `;
+            } else if (copyright.warning) {
+              copyrightMessage = `
+                <div class="copyright-warning">
+                  <p><strong>Note:</strong> ${copyright.warning}</p>
+                </div>
+              `;
+            }
+          } catch (err) {
+            console.error('Error handling copyright info:', err);
+            // Add a generic copyright warning if everything else fails
+            copyrightMessage = `
+              <div class="copyright-warning">
+                <p><strong>Note:</strong> Copyright detection was performed but results could not be displayed properly.</p>
+                <p>Please ensure you have rights to any audio content you upload.</p>
+              </div>
+            `;
+          }
+        }
 
-      } catch (error) {
         Swal.fire({
+          title: 'Post Created!',
+          html: `Your post has been successfully published.${copyrightMessage}`,
+          icon: 'success',
+          confirmButtonText: 'OK',
+          cancelButtonText: 'Create Another',
+          showCancelButton: true,
+          confirmButtonColor: '#2196f3'
+        }).then((result) => {
+          if (result.isConfirmed) {
+            // DISABLE automatic redirection to view post
+            // Just go to dashboard instead
+            window.location.href = '/dashboard';
+          } else {
+            // Reset form for new post
+            resetForm();
+          }
+        });
+      } catch (error) {
+        console.error('Error creating post:', error);
+        
+        let errorMessage = 'Failed to create post. Please try again.';
+        if (error.response && error.response.data && error.response.data.message) {
+          errorMessage = error.response.data.message;
+        } else if (error.response && error.response.data && error.response.data.error) {
+          errorMessage = error.response.data.error;
+        } else if (error.message) {
+          errorMessage = error.message;
+        }
+        
+        Swal.fire({
+          title: 'Error',
+          text: errorMessage,
           icon: 'error',
-          title: 'Creation Failed',
-          text: error.message || 'Failed to create post',
+          confirmButtonText: 'OK'
         });
       } finally {
         isSubmitting.value = false;
@@ -269,13 +462,17 @@ export default {
       remarks,
       image,
       video,
+      audio,
       imagePreview,
       videoPreview,
+      audioPreview,
       isSubmitting,
       handleImageUpload,
       handleVideoUpload,
+      handleAudioUpload,
       removeImage,
       removeVideo,
+      removeAudio,
       resetForm,
       handleSubmit
     };
@@ -350,7 +547,7 @@ export default {
 
 .media-upload-section {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: 1fr 1fr 1fr;
   gap: 1rem;
   margin-bottom: 1.5rem;
 }
@@ -455,6 +652,73 @@ export default {
   background: #ccc;
   cursor: not-allowed;
   transform: none;
+}
+
+.audio-preview {
+  display: flex;
+  flex-direction: column;
+  padding: 1rem;
+  background: #f8f9fa;
+  border-radius: 8px;
+}
+
+.audio-player {
+  width: 100%;
+  margin-bottom: 0.5rem;
+}
+
+.audio-info {
+  margin-top: 0.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.audio-filename {
+  font-weight: 500;
+  color: #555;
+  word-break: break-all;
+}
+
+.audio-note {
+  font-size: 0.85rem;
+  color: #888;
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.info-icon {
+  font-size: 1rem;
+  color: #2196f3;
+}
+
+.file-size-warning {
+  margin-bottom: 0.5rem;
+  padding: 0.5rem;
+  background: #f8f9fa;
+  border-radius: 8px;
+  text-align: center;
+}
+
+.warning-icon {
+  font-size: 1rem;
+  color: #dc3545;
+}
+
+.copyright-alert {
+  margin-top: 1rem;
+  padding: 1rem;
+  background-color: #fff3cd;
+  border-left: 4px solid #ffc107;
+  border-radius: 4px;
+  text-align: left;
+}
+
+.copyright-warning {
+  margin-top: 0.5rem;
+  color: #dc3545;
+  font-weight: bold;
 }
 
 @media (max-width: 768px) {

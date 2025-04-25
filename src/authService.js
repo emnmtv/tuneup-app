@@ -2,7 +2,7 @@ const BASE_URL = "http://localhost:3200/auth"; // Base API URL
 // const BASE_URL = "http://192.168.0.104:3200/auth"; // Base API URL
 
 // New base URL for images and videos
-const MEDIA_BASE_URL = "http://localhost:3200"; // Remove /uploads from base URL
+export const MEDIA_BASE_URL = "http://localhost:3200"; // Remove /uploads from base URL
 // const MEDIA_BASE_URL = "http://192.168.0.104:3200/uploads"; 
 // Add this function to parse JWT token
 export const getUserIdFromToken = () => {
@@ -158,20 +158,28 @@ export async function verifyEmail(email, code) {
   }
 }
 
-export const upgradeToCreator = async (data) => {
-  const token = localStorage.getItem('token'); // Assuming the token is stored in localStorage
+export const upgradeToCreator = async (formData) => {
+  const token = localStorage.getItem('token');
 
   if (!token) {
     throw new Error('Token not found. Please log in.');
   }
 
+  // Get the social links from FormData and parse them
+  const socialLinksString = formData.get('socialLinks');
+  if (socialLinksString) {
+    // Remove the old social links from FormData
+    formData.delete('socialLinks');
+    // Add it back as a proper string field
+    formData.append('socialLinks', socialLinksString);
+  }
+
   const response = await fetch(`${BASE_URL}/upgrade`, {
     method: 'POST',
     headers: {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${token}`, // Add the token to the Authorization header
+      'Authorization': `Bearer ${token}`,
     },
-    body: JSON.stringify(data),
+    body: formData,
   });
 
   if (!response.ok) {
@@ -242,21 +250,49 @@ export const createPost = async (data) => {
     throw new Error('Token not found. Please log in.');
   }
 
-  const formData = new FormData();
-  formData.append('title', data.title);
-  formData.append('description', data.description);
-  formData.append('detailedDescription', data.detailedDescription || ''); // New field
-  formData.append('amount', data.amount || ''); // New field
-  formData.append('remarks', data.remarks || ''); // New field
-
-  if (data.image) {
-    formData.append('image', data.image); // File object
-  }
-  if (data.video) {
-    formData.append('video', data.video); // File object
-  }
-
   try {
+    // Check if data is already a FormData object
+    let formData;
+    if (data instanceof FormData) {
+      formData = data;
+      
+      // Verify that title and description are not undefined
+      const title = formData.get('title');
+      const description = formData.get('description');
+      
+      if (!title || title === 'undefined') {
+        throw new Error('Title is required and cannot be undefined');
+      }
+      
+      if (!description || description === 'undefined') {
+        throw new Error('Description is required and cannot be undefined');
+      }
+    } else {
+      // Create FormData if not already a FormData object
+      formData = new FormData();
+      formData.append('title', data.title || '');
+      formData.append('description', data.description || '');
+      formData.append('detailedDescription', data.detailedDescription || '');
+      formData.append('amount', data.amount || '');
+      formData.append('remarks', data.remarks || '');
+
+      if (data.image) {
+        formData.append('image', data.image);
+      }
+      if (data.video) {
+        formData.append('video', data.video);
+      }
+      if (data.audio) {
+        formData.append('audio', data.audio);
+      }
+    }
+
+    // Log the actual data being sent
+    console.log('Sending post data to server:');
+    for (let [key, value] of formData.entries()) {
+      console.log(`${key}: ${value}`);
+    }
+
     const response = await fetch(`${BASE_URL}/createpost`, {
       method: 'POST',
       headers: {
@@ -268,13 +304,64 @@ export const createPost = async (data) => {
     if (!response.ok) {
       const errorText = await response.text();
       console.error('Server Error:', errorText);
-      throw new Error('Failed to create post');
+      throw new Error('Failed to create post: ' + errorText);
     }
 
-    return await response.json();
+    const result = await response.json();
+    // Debug log to see the exact response structure
+    console.log('Create post response:', result);
+    
+    // Ensure we return a consistent structure regardless of what the server returns
+    return {
+      post: result.post || result.data || null,
+      message: result.message || 'Post created successfully'
+    };
   } catch (error) {
     console.error('Error in createPost:', error);
     throw new Error(error.message || 'Unknown error occurred');
+  }
+};
+
+// Helper function to safely parse copyright info
+const safelyParseJSONCopyright = (jsonString) => {
+  if (!jsonString) return null;
+  
+  try {
+    // Try normal parsing first
+    return JSON.parse(jsonString);
+  } catch (jsonError) {
+    console.warn('Error parsing copyright JSON, attempting to extract partial data:', jsonError);
+    
+    try {
+      // Try to extract song info using regex
+      const songMatch = jsonString.match(/"title":"([^"]+)","artist":"([^"]+)"/);
+      if (songMatch) {
+        return {
+          isDetected: true,
+          songInfo: {
+            title: songMatch[1] || 'Unknown',
+            artist: songMatch[2] || 'Unknown',
+          },
+          error: 'Incomplete copyright data'
+        };
+      }
+      
+      // If we can't extract song info, return a generic placeholder
+      return {
+        isDetected: true,
+        songInfo: {
+          title: 'Unknown Song',
+          artist: 'Unknown Artist',
+        },
+        error: 'Malformed copyright data'
+      };
+    } catch (regexError) {
+      console.error('Failed to extract partial copyright data:', regexError);
+      return {
+        isDetected: false,
+        error: 'Could not parse copyright data'
+      };
+    }
   }
 };
 
@@ -302,11 +389,37 @@ export const fetchUserProfileAndPosts = async () => {
     // Construct full URLs for images and videos
     const userWithMedia = {
       ...data,
-      posts: data.posts.map(post => ({
-        ...post,
-        image: post.image ? `${MEDIA_BASE_URL}/uploads/${post.image}` : null,
-        video: post.video ? `${MEDIA_BASE_URL}/uploads/${post.video}` : null,
-      })),
+      posts: data.posts.map(post => {
+        let parsedCopyrightInfo = null;
+        if (post.copyrightInfo) {
+          try {
+            // Log the raw string to debug malformed JSON
+            console.debug(`Copyright info for post ${post.id}:`, post.copyrightInfo);
+            parsedCopyrightInfo = safelyParseJSONCopyright(post.copyrightInfo);
+          } catch (e) {
+            console.warn(`Failed to parse copyright info for post ${post.id}:`, e);
+            // Try to fix common JSON parse errors - unescaped quotes, missing quotes, unterminated strings
+            try {
+              // Remove the offending JSON and use a placeholder object
+              parsedCopyrightInfo = { 
+                isDetected: false, 
+                error: "Corrupted copyright data", 
+                originalData: post.copyrightInfo.substring(0, 50) + "..." 
+              };
+            } catch(err) {
+              console.error("Could not create placeholder for corrupted copyright data:", err);
+            }
+          }
+        }
+        
+        return {
+          ...post,
+          image: post.image ? `${MEDIA_BASE_URL}/uploads/${post.image}` : null,
+          video: post.video ? `${MEDIA_BASE_URL}/uploads/${post.video}` : null,
+          audio: post.audio ? `${MEDIA_BASE_URL}/uploads/audio/${post.audio}` : null,
+          copyrightInfo: parsedCopyrightInfo
+        };
+      }),
     };
 
     return userWithMedia;
@@ -324,29 +437,53 @@ export const editPost = async (postId, postData) => {
   }
 
   try {
+    // Create a FormData object for file uploads
+    const formData = new FormData();
+    formData.append('postId', postId);
+    
+    // Add all other post data
+    Object.keys(postData).forEach(key => {
+      // Skip files, they'll be handled separately
+      if (key !== 'image' && key !== 'video' && key !== 'audio') {
+        if (postData[key] !== null && postData[key] !== undefined) {
+          formData.append(key, postData[key]);
+        }
+      }
+    });
+    
+    // Add files if they exist
+    if (postData.image instanceof File) {
+      formData.append('image', postData.image);
+    }
+    
+    if (postData.video instanceof File) {
+      formData.append('video', postData.video);
+    }
+    
+    if (postData.audio instanceof File) {
+      formData.append('audio', postData.audio);
+    }
+
     const response = await fetch(`${BASE_URL}/editpost`, {
       method: 'PUT',
       headers: {
         'Authorization': `Bearer ${token}`,
-        'Content-Type': 'application/json',
+        // Don't set Content-Type header when sending FormData
       },
-      body: JSON.stringify({
-        postId: Number(postId), // Convert to integer
-        ...postData,
-      }),
+      body: formData,
     });
 
     if (!response.ok) {
       const errorData = await response.json();
       console.error('Error details:', errorData);
-      throw new Error(`Error: ${response.statusText}`);
+      throw new Error(errorData.error || `Error: ${response.statusText}`);
     }
 
     const data = await response.json();
     return data;
   } catch (error) {
     console.error('Edit Post error:', error);
-    return null;
+    throw error; // Re-throw to allow proper handling by the caller
   }
 };
 
@@ -395,11 +532,37 @@ export const fetchAllPosts = async () => {
     // Filter out rejected posts and add media URLs
     const postsWithMedia = data
       .filter(post => post.status !== 'rejected')
-      .map(post => ({
-        ...post,
-        image: post.image ? `${MEDIA_BASE_URL}/uploads/${post.image}` : null,
-        video: post.video ? `${MEDIA_BASE_URL}/uploads/${post.video}` : null,
-      }));
+      .map(post => {
+        let parsedCopyrightInfo = null;
+        if (post.copyrightInfo) {
+          try {
+            // Log the raw string to debug malformed JSON
+            console.debug(`Copyright info for post ${post.id}:`, post.copyrightInfo);
+            parsedCopyrightInfo = safelyParseJSONCopyright(post.copyrightInfo);
+          } catch (e) {
+            console.warn(`Failed to parse copyright info for post ${post.id}:`, e);
+            // Try to fix common JSON parse errors - unescaped quotes, missing quotes, unterminated strings
+            try {
+              // Remove the offending JSON and use a placeholder object
+              parsedCopyrightInfo = { 
+                isDetected: false, 
+                error: "Corrupted copyright data", 
+                originalData: post.copyrightInfo.substring(0, 50) + "..." 
+              };
+            } catch(err) {
+              console.error("Could not create placeholder for corrupted copyright data:", err);
+            }
+          }
+        }
+        
+        return {
+          ...post,
+          image: post.image ? `${MEDIA_BASE_URL}/uploads/${post.image}` : null,
+          video: post.video ? `${MEDIA_BASE_URL}/uploads/${post.video}` : null,
+          audio: post.audio ? `${MEDIA_BASE_URL}/uploads/audio/${post.audio}` : null,
+          copyrightInfo: parsedCopyrightInfo
+        };
+      });
 
     return postsWithMedia;
   } catch (error) {
@@ -416,11 +579,31 @@ export const fetchPostDetails = async (postId) => {
     }
     const data = await response.json();
 
+    // Parse copyright info safely
+    let parsedCopyrightInfo = null;
+    if (data.copyrightInfo) {
+      try {
+        // Log the raw string to debug malformed JSON
+        console.debug(`Copyright info for post ${postId}:`, data.copyrightInfo);
+        parsedCopyrightInfo = safelyParseJSONCopyright(data.copyrightInfo);
+      } catch (e) {
+        console.warn(`Failed to parse copyright info for post ${postId}:`, e);
+        // Create a placeholder object for the corrupted data
+        parsedCopyrightInfo = { 
+          isDetected: false, 
+          error: "Corrupted copyright data", 
+          originalData: data.copyrightInfo.substring(0, 50) + "..." 
+        };
+      }
+    }
+
     // Construct full URLs for images and videos
     return {
       ...data,
       image: data.image ? `${MEDIA_BASE_URL}/uploads/${data.image}` : null,
       video: data.video ? `${MEDIA_BASE_URL}/uploads/${data.video}` : null,
+      audio: data.audio ? `${MEDIA_BASE_URL}/uploads/audio/${data.audio}` : null,
+      copyrightInfo: parsedCopyrightInfo
     };
   } catch (error) {
     console.error("Error fetching post details:", error);
@@ -903,4 +1086,208 @@ export async function loginWithGoogle(accessToken) {
     throw error;
   }
 }
+
+// ==================== ANALYTICS & ENGAGEMENT TRACKING FUNCTIONS ====================
+
+// Track profile view
+export const trackProfileView = async (creatorId) => {
+  try {
+    const response = await fetch(`${BASE_URL}/track/profile-view/${creatorId}`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      // Include token if available for authenticated users
+      ...(localStorage.getItem('token') && {
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        }
+      })
+    });
+
+    if (!response.ok) {
+      console.warn('Failed to track profile view:', response.statusText);
+      return false;
+    }
+    
+    return true;
+  } catch (error) {
+    console.warn('Error tracking profile view:', error);
+    return false; // Fail silently - don't affect user experience
+  }
+};
+
+// Track post view
+export const trackPostView = async (postId) => {
+  try {
+    const response = await fetch(`${BASE_URL}/track/post-view/${postId}`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      // Include token if available
+      ...(localStorage.getItem('token') && {
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        }
+      })
+    });
+
+    if (!response.ok) {
+      console.warn('Failed to track post view:', response.statusText);
+      return false;
+    }
+    
+    return true;
+  } catch (error) {
+    console.warn('Error tracking post view:', error);
+    return false; // Fail silently
+  }
+};
+
+// Track audio play with enhanced metadata
+export const trackAudioPlay = async (postId, duration) => {
+  try {
+    // Get device and browser details
+    const deviceInfo = {
+      screenWidth: window.innerWidth,
+      screenHeight: window.innerHeight,
+      language: navigator.language,
+      platform: navigator.platform,
+      userAgent: navigator.userAgent,
+      timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone
+    };
+
+    const response = await fetch(`${BASE_URL}/track/audio-play/${postId}`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...(localStorage.getItem('token') && {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        })
+      },
+      body: JSON.stringify({ 
+        duration,
+        deviceInfo,
+        referrer: document.referrer,
+        currentUrl: window.location.href,
+        timestamp: new Date().toISOString()
+      })
+    });
+
+    if (!response.ok) {
+      console.warn('Failed to track audio play:', response.statusText);
+      return false;
+    }
+    
+    return true;
+  } catch (error) {
+    console.warn('Error tracking audio play:', error);
+    return false; // Fail silently
+  }
+};
+
+// Track click-through with enhanced metadata
+export const trackClickThrough = async (sourceType, sourceId, destinationType, destinationId = null) => {
+  try {
+    // Get device and browser details
+    const deviceInfo = {
+      screenWidth: window.innerWidth,
+      screenHeight: window.innerHeight,
+      language: navigator.language,
+      platform: navigator.platform,
+      userAgent: navigator.userAgent,
+      timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone
+    };
+
+    // Get page session time
+    const sessionStartTime = sessionStorage.getItem('pageSessionStart');
+    let timeOnPage = null;
+    
+    if (sessionStartTime) {
+      timeOnPage = Math.floor((Date.now() - parseInt(sessionStartTime)) / 1000); // in seconds
+    }
+
+    const response = await fetch(`${BASE_URL}/track/click-through`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...(localStorage.getItem('token') && {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        })
+      },
+      body: JSON.stringify({ 
+        sourceType, // 'post' or 'profile'
+        sourceId,
+        destinationType,
+        destinationId,
+        exitUrl: destinationId ? `/${destinationType}/${destinationId}` : null,
+        deviceInfo,
+        referrer: document.referrer,
+        currentUrl: window.location.href,
+        timeOnPage,
+        timestamp: new Date().toISOString()
+      })
+    });
+
+    if (!response.ok) {
+      console.warn('Failed to track click-through:', response.statusText);
+      return false;
+    }
+    
+    // Reset session start time for new page
+    sessionStorage.setItem('pageSessionStart', Date.now().toString());
+    
+    return true;
+  } catch (error) {
+    console.warn('Error tracking click-through:', error);
+    return false; // Fail silently
+  }
+};
+
+// Get creator analytics
+export const getCreatorAnalytics = async (creatorId, startDate, endDate) => {
+  const token = localStorage.getItem('token');
+  
+  if (!token) {
+    throw new Error('Authentication required to access analytics');
+  }
+
+  try {
+    // Build the URL with optional parameters
+    let url = `${BASE_URL}/analytics`;
+    
+    // Add creatorId if provided (for admins viewing other creators' analytics)
+    if (creatorId) {
+      url += `/${creatorId}`;
+    }
+    
+    // Add date range if provided
+    const params = new URLSearchParams();
+    if (startDate) params.append('startDate', startDate);
+    if (endDate) params.append('endDate', endDate);
+    
+    if (params.toString()) {
+      url += `?${params.toString()}`;
+    }
+
+    const response = await fetch(url, {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      }
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.error || 'Failed to fetch analytics');
+    }
+
+    return await response.json();
+  } catch (error) {
+    console.error('Error fetching analytics:', error);
+    throw new Error(error.message || 'Failed to fetch analytics data');
+  }
+};
 

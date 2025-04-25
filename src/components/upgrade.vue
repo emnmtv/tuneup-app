@@ -126,6 +126,84 @@
           />
         </div>
 
+        <!-- Portfolio File -->
+        <div class="form-group">
+          <label>
+            <i class="material-icons">folder</i>
+            Portfolio
+          </label>
+          <input 
+            type="file" 
+            @change="handlePortfolioFile" 
+            accept=".pdf,image/*"
+            class="file-input"
+          />
+          <span class="help-text">Upload your portfolio (PDF or images only)</span>
+        </div>
+
+        <!-- Resume File -->
+        <div class="form-group">
+          <label>
+            <i class="material-icons">description</i>
+            Resume
+          </label>
+          <input 
+            type="file" 
+            @change="handleResumeFile" 
+            accept=".pdf,.doc,.docx"
+            class="file-input"
+          />
+          <span class="help-text">Upload your resume (PDF or DOC files only)</span>
+        </div>
+
+        <!-- Social Media Links -->
+        <div class="form-group">
+          <label>
+            <i class="material-icons">share</i>
+            Social Media Links
+          </label>
+          <div v-for="(link, index) in socialLinks" :key="index" class="social-link-input">
+            <select v-model="link.platform" required>
+              <option value="">Select Platform</option>
+              <option value="Facebook">Facebook</option>
+              <option value="Instagram">Instagram</option>
+              <option value="Twitter">Twitter</option>
+              <option value="YouTube">YouTube</option>
+              <option value="SoundCloud">SoundCloud</option>
+              <option value="TikTok">TikTok</option>
+              <option value="Spotify">Spotify</option>
+              <option value="Apple Music">Apple Music</option>
+              <option value="Amazon Music">Amazon Music</option>
+              <option value="SoundCloud">SoundCloud</option>
+              <option value="TikTok">TikTok</option>
+            </select>
+            <input 
+              type="url" 
+              v-model="link.url" 
+              placeholder="Enter URL"
+              required
+            />
+            <button 
+              type="button" 
+              @click="removeSocialLink(index)" 
+              class="remove-link-btn"
+              v-if="index > 0"
+            >
+              <i class="material-icons">remove_circle</i>
+            </button>
+          </div>
+          <button 
+            type="button" 
+            @click="addSocialLink" 
+            class="add-link-btn"
+            v-if="socialLinks.length < 5"
+          >
+            <i class="material-icons">add_circle</i>
+            Add Social Link
+          </button>
+          <span class="help-text">Add up to 5 social media links</span>
+        </div>
+
         <!-- Submit Button -->
         <div class="form-actions">
           <button 
@@ -156,7 +234,28 @@ export default {
     const profession = ref('');
     const typeOfProfession = ref('');
     const genre = ref('');
+    const portfolioFile = ref(null);
+    const resumeFile = ref(null);
+    const socialLinks = ref([{ platform: '', url: '' }]);
     const loading = ref(false);
+
+    const handlePortfolioFile = (event) => {
+      portfolioFile.value = event.target.files[0];
+    };
+
+    const handleResumeFile = (event) => {
+      resumeFile.value = event.target.files[0];
+    };
+
+    const addSocialLink = () => {
+      if (socialLinks.value.length < 5) {
+        socialLinks.value.push({ platform: '', url: '' });
+      }
+    };
+
+    const removeSocialLink = (index) => {
+      socialLinks.value.splice(index, 1);
+    };
 
     const handleLogout = async () => {
       try {
@@ -192,13 +291,28 @@ export default {
           return;
         }
 
-        await upgradeToCreator({
-          offers: offers.value,
-          bio: bio.value,
-          profession: profession.value,
-          typeOfProfession: typeOfProfession.value,
-          genre: genre.value
-        });
+        // Create FormData object
+        const formData = new FormData();
+        formData.append('offers', offers.value);
+        formData.append('bio', bio.value);
+        formData.append('profession', profession.value);
+        formData.append('typeOfProfession', typeOfProfession.value);
+        formData.append('genre', genre.value);
+
+        if (portfolioFile.value) {
+          formData.append('portfolioFile', portfolioFile.value);
+        }
+        if (resumeFile.value) {
+          formData.append('resumeFile', resumeFile.value);
+        }
+
+        // Filter out empty social links
+        const validSocialLinks = socialLinks.value.filter(link => link.platform && link.url);
+        if (validSocialLinks.length > 0) {
+          formData.append('socialLinks', JSON.stringify(validSocialLinks));
+        }
+
+        await upgradeToCreator(formData);
 
         let timerInterval;
         await Swal.fire({
@@ -251,7 +365,14 @@ export default {
       profession,
       typeOfProfession,
       genre,
+      portfolioFile,
+      resumeFile,
+      socialLinks,
       loading,
+      handlePortfolioFile,
+      handleResumeFile,
+      addSocialLink,
+      removeSocialLink,
       handleSubmit
     };
   }
@@ -453,5 +574,60 @@ export default {
 .next-steps li {
   margin: 0.5rem 0;
   color: #666;
+}
+
+.file-input {
+  border: 1px dashed #ddd;
+  padding: 1rem;
+  border-radius: 8px;
+  width: 100%;
+  cursor: pointer;
+}
+
+.file-input:hover {
+  border-color: #2196f3;
+}
+
+.social-link-input {
+  display: flex;
+  gap: 1rem;
+  margin-bottom: 1rem;
+  align-items: center;
+}
+
+.social-link-input select,
+.social-link-input input {
+  flex: 1;
+}
+
+.add-link-btn,
+.remove-link-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 1rem;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.3s;
+}
+
+.add-link-btn {
+  background: #4caf50;
+  color: white;
+}
+
+.remove-link-btn {
+  background: none;
+  color: #f44336;
+  padding: 0;
+}
+
+.add-link-btn:hover {
+  background: #388e3c;
+}
+
+.remove-link-btn:hover {
+  color: #d32f2f;
 }
 </style>

@@ -138,7 +138,9 @@
             <div class="creator-info">
               <img :src="post.user.avatar" :alt="post.user.firstName" class="creator-avatar" />
               <div class="creator-details">
-                <h4>{{ post.user.firstName }} {{ post.user.lastName }}</h4>
+                <h4 @click.stop="viewCreatorProfile(post.user.id, post.id)" class="clickable-name">
+                  {{ post.user.firstName }} {{ post.user.lastName }}
+                </h4>
                 <div class="profession-details">
                   <span class="profession" v-if="post.user.creatorProfile?.typeOfProfession">
                     {{ post.user.creatorProfile?.typeOfProfession }}
@@ -163,8 +165,8 @@
       <div class="posts-grid">
         <div 
           v-for="post in filteredPosts" 
-      :key="post.id"
-      class="post-card"
+          :key="post.id"
+          class="post-card"
           @click="navigateToPost(post.id)"
         >
           <div class="post-media">
@@ -172,19 +174,21 @@
             <div class="post-price" v-if="post.amount">
               ₱{{ formatAmount(post.amount) }}
             </div>
-      </div>
+          </div>
       
-      <div class="post-content">
-        <h3 class="post-title">{{ post.title }}</h3>
-        <p class="post-description">{{ post.description }}</p>
+          <div class="post-content">
+            <h3 class="post-title">{{ post.title }}</h3>
+            <p class="post-description">{{ post.description }}</p>
         
             <div class="post-footer">
               <div class="creator-info">
-                <div class="creator-avatar">
+                <div class="creator-avatar" @click.stop="viewCreatorProfile(post.user.id, post.id)">
                   {{ getInitials(post.user.firstName, post.user.lastName) }}
                 </div>
                 <div class="creator-details">
-          <h4>{{ post.user.firstName }} {{ post.user.lastName }}</h4>
+                  <h4 @click.stop="viewCreatorProfile(post.user.id, post.id)" class="clickable-name">
+                    {{ post.user.firstName }} {{ post.user.lastName }}
+                  </h4>
                   <div class="profession-details">
                     <span class="profession" v-if="post.user.creatorProfile?.typeOfProfession">
                       {{ post.user.creatorProfile?.typeOfProfession }}
@@ -202,12 +206,12 @@
           </div>
         </div>
       </div>
-  </div>
+    </div>
   </div>
 </template>
 
 <script>
-import { fetchAllPosts } from '../authService.js';
+import { fetchAllPosts, trackPostView, trackClickThrough } from '../authService.js';
 
 export default {
   data() {
@@ -494,7 +498,16 @@ export default {
   },
   methods: {
     navigateToPost(postId) {
+      // Track post view before navigation
+      trackPostView(postId);
+      // Navigate to post detail view
       this.$router.push(`/post/${postId}`);
+    },
+    viewCreatorProfile(creatorId, postId) {
+      // Track click-through from post to creator profile
+      trackClickThrough('post', postId, 'profile', creatorId);
+      // Navigate to creator profile
+      this.$router.push(`/creator/${creatorId}`);
     },
     getInitials(firstName, lastName) {
       return `${firstName[0]}${lastName[0]}`.toUpperCase();
@@ -511,6 +524,8 @@ export default {
     selectCategory(categoryId) {
       this.selectedCategory = categoryId;
       this.isDropdownOpen = false;
+      // Track category selection as engagement
+      trackClickThrough('dashboard', 0, 'category_filter', categoryId);
       this.filterPosts();
     },
     filterPosts() {
@@ -518,6 +533,10 @@ export default {
     },
     selectSubcategory(subcategory) {
       this.selectedSubcategory = subcategory;
+      // Track subcategory selection as engagement
+      if (subcategory) {
+        trackClickThrough('dashboard', 0, 'subcategory_filter', subcategory);
+      }
       this.filterPosts();
     },
     resetFilters() {
@@ -525,6 +544,8 @@ export default {
       this.selectedSubcategory = null;
       this.selectedGenre = null;
       this.isDropdownOpen = false;
+      // Track filter reset as engagement
+      trackClickThrough('dashboard', 0, 'reset_filters');
       this.filterPosts();
     }
   }
@@ -1010,5 +1031,25 @@ export default {
   background: #2e7d32;
   color: white;
   border-color: #2e7d32;
+}
+
+/* Add new clickable name styles */
+.clickable-name {
+  cursor: pointer;
+  transition: color 0.2s;
+}
+
+.clickable-name:hover {
+  color: #2196f3;
+  text-decoration: underline;
+}
+
+.creator-avatar {
+  cursor: pointer;
+  transition: transform 0.2s;
+}
+
+.creator-avatar:hover {
+  transform: scale(1.05);
 }
 </style>

@@ -46,6 +46,7 @@ const routes = [
  {path: '/messages', component: Message},
  { path: "/user-payments", component: UserPayments },
  { path: "/client-payments", component: ClientPayments },
+ { path: "/creator/:creatorId", component: CreatorProfile },
 
  {
    path: '/client/payment/:referenceNumber', // Route for client payment details
