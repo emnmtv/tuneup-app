@@ -251,11 +251,11 @@
       <div class="right-column">
         <div class="creator-card">
           <div class="creator-header">
-            <div class="creator-avatar" @click="viewCreatorProfile">
+            <div class="creator-avatar" @click="openCreatorModal">
               {{ getInitials(post.user.firstName, post.user.lastName) }}
             </div>
             <div class="creator-info">
-              <h2 @click="viewCreatorProfile" class="clickable-name">{{ post.user.firstName }} {{ post.user.lastName }}</h2>
+              <h2 @click="openCreatorModal" class="clickable-name">{{ post.user.firstName }} {{ post.user.lastName }}</h2>
               <span class="creator-role">{{ post.user.role }}</span>
               <div class="verification-badge" v-if="post.user.creatorProfile?.isVerified">
                 <i class="material-icons">verified</i>
@@ -368,7 +368,7 @@
           </div>
 
           <div class="action-buttons">
-            <button @click="viewCreatorProfile" class="profile-btn">
+            <button @click="openCreatorModal" class="profile-btn">
               <i class="material-icons">person</i>
               View Profile
             </button>
@@ -473,6 +473,194 @@
         </div>
       </div>
     </div>
+
+    <!-- Creator Profile Modal -->
+    <div v-if="isCreatorModalOpen" class="modal-overlay" @click="closeCreatorModal">
+      <div class="creator-modal-content" @click.stop>
+        <div class="modal-header">
+          <h2>Creator Profile</h2>
+          <button class="close-btn" @click="closeCreatorModal">
+            <i class="material-icons">close</i>
+          </button>
+        </div>
+        
+        <div class="creator-modal-body">
+          <!-- Creator Profile Header -->
+          <div class="creator-profile-header">
+            <div class="creator-cover-photo" :style="coverPhotoStyle"></div>
+            <div class="creator-profile-main">
+              <div class="creator-avatar-large">
+                <img v-if="post.user.profilePicture" :src="post.user.profilePicture" :alt="post.user.firstName" />
+                <div v-else class="initials-avatar">
+                  {{ getInitials(post.user.firstName, post.user.lastName) }}
+                </div>
+              </div>
+              <div class="creator-main-info">
+                <h2>{{ post.user.firstName }} {{ post.user.lastName }}</h2>
+                <div class="creator-badges">
+                  <div v-if="post.user.creatorProfile?.isVerified" class="creator-badge verified">
+                    <i class="material-icons">verified</i>
+                    <span>Verified Creator</span>
+                  </div>
+                  <div class="creator-badge level">
+                    <div class="stars">
+                      <i v-for="n in 5" :key="n" class="material-icons stars-icon" 
+                         :class="{ 'filled': n <= Math.round(post.user.creatorProfile?.creatorLevel || 0) }">
+                        star
+                      </i>
+                    </div>
+                    <span>{{ (post.user.creatorProfile?.creatorLevel || 0).toFixed(1) }}/5.0</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Creator Bio -->
+          <div class="creator-section" v-if="post.user.creatorProfile?.bio">
+            <h3>About</h3>
+            <p>{{ post.user.creatorProfile.bio }}</p>
+          </div>
+
+          <!-- Professional Details -->
+          <div class="creator-section">
+            <h3>Professional Details</h3>
+            <div class="creator-details-grid">
+              <div class="detail-item" v-if="post.user.creatorProfile?.typeOfProfession">
+                <i class="material-icons">category</i>
+                <div class="detail-text">
+                  <span class="detail-label">Type of Profession</span>
+                  <span class="detail-value">{{ post.user.creatorProfile.typeOfProfession }}</span>
+                </div>
+              </div>
+              <div class="detail-item" v-if="post.user.creatorProfile?.profession">
+                <i class="material-icons">work</i>
+                <div class="detail-text">
+                  <span class="detail-label">Profession</span>
+                  <span class="detail-value">{{ post.user.creatorProfile.profession }}</span>
+                </div>
+              </div>
+              <div class="detail-item" v-if="post.user.creatorProfile?.genre">
+                <i class="material-icons">music_note</i>
+                <div class="detail-text">
+                  <span class="detail-label">Genre</span>
+                  <span class="detail-value">{{ post.user.creatorProfile.genre }}</span>
+                </div>
+              </div>
+              <div class="detail-item" v-if="post.user.creatorProfile?.specialization">
+                <i class="material-icons">stars</i>
+                <div class="detail-text">
+                  <span class="detail-label">Specialization</span>
+                  <span class="detail-value">{{ post.user.creatorProfile.specialization }}</span>
+                </div>
+              </div>
+              <div class="detail-item" v-if="post.user.creatorProfile?.experience">
+                <i class="material-icons">timeline</i>
+                <div class="detail-text">
+                  <span class="detail-label">Experience</span>
+                  <span class="detail-value">{{ post.user.creatorProfile.experience }} years</span>
+                </div>
+              </div>
+              <div class="detail-item" v-if="post.user.creatorProfile?.availability">
+                <i class="material-icons">schedule</i>
+                <div class="detail-text">
+                  <span class="detail-label">Availability</span>
+                  <span class="detail-value">{{ post.user.creatorProfile.availability }}</span>
+                </div>
+              </div>
+              <div class="detail-item" v-if="post.user.creatorProfile?.ratePerHour">
+                <i class="material-icons">payments</i>
+                <div class="detail-text">
+                  <span class="detail-label">Rate per Hour</span>
+                  <span class="detail-value">₱{{ formatAmount(post.user.creatorProfile.ratePerHour) }}</span>
+                </div>
+              </div>
+              <div class="detail-item" v-if="post.user.creatorProfile?.equipment">
+                <i class="material-icons">music_note</i>
+                <div class="detail-text">
+                  <span class="detail-label">Equipment</span>
+                  <span class="detail-value">{{ post.user.creatorProfile.equipment }}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Services Offered -->
+          <div class="creator-section" v-if="post.user.creatorProfile?.offers">
+            <h3>Services Offered</h3>
+            <div class="offers-tags">
+              <span v-for="offer in getOffers(post.user.creatorProfile.offers)" 
+                    :key="offer" 
+                    class="offer-tag">
+                {{ offer }}
+              </span>
+            </div>
+          </div>
+
+          <!-- Portfolio & Documents -->
+          <div class="creator-section">
+            <h3>Portfolio & Documents</h3>
+            <div class="document-links">
+              <a v-if="post.user.creatorProfile?.portfolioFile" :href="post.user.creatorProfile.portfolioFile" 
+                 target="_blank" class="document-link">
+                <i class="material-icons">description</i>
+                <span>Portfolio</span>
+              </a>
+              <a v-if="post.user.creatorProfile?.resumeFile" :href="post.user.creatorProfile.resumeFile" 
+                 target="_blank" class="document-link">
+                <i class="material-icons">article</i>
+                <span>Resume</span>
+              </a>
+              <a v-if="post.user.creatorProfile?.portfolio" :href="post.user.creatorProfile.portfolio" 
+                 target="_blank" class="document-link">
+                <i class="material-icons">link</i>
+                <span>Portfolio Website</span>
+              </a>
+            </div>
+          </div>
+
+          <!-- Social Media Links -->
+          <div class="creator-section" v-if="post.user.creatorProfile?.socialLinks && post.user.creatorProfile.socialLinks.length > 0">
+            <h3>Social Media</h3>
+            <div class="social-links">
+              <a v-for="link in post.user.creatorProfile.socialLinks" 
+                 :key="link.id" 
+                 :href="link.url" 
+                 target="_blank" 
+                 class="social-link">
+                <i class="material-icons">{{ getSocialIcon(link.platform) }}</i>
+                <span>{{ link.platform }}</span>
+              </a>
+            </div>
+          </div>
+          
+          <!-- Creator Ratings Section -->
+          <div class="creator-section" v-if="creatorRatings">
+            <h3>Ratings & Reviews</h3>
+            <div class="rating-stats">
+              <div class="average-rating">
+                <div class="rating-value">{{ creatorRatings.stats.average.toFixed(1) }}</div>
+                <div class="stars">
+                  <span v-for="star in 5" :key="star" class="material-icons"
+                    :class="{ filled: star <= Math.round(creatorRatings.stats.average) }">
+                    star
+                  </span>
+                </div>
+                <div class="total-ratings">{{ creatorRatings.stats.total }} ratings</div>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <div class="modal-footer">
+          <button class="cancel-btn" @click="closeCreatorModal">Close</button>
+          <button class="profile-btn view-full-profile" @click="viewCreatorProfile">
+            <i class="material-icons">person</i>
+            View Full Profile
+          </button>
+        </div>
+      </div>
+    </div>
   </div>
 
   <div v-else class="loading-container">
@@ -499,6 +687,7 @@ export default {
       post: null,
       error: null,
       isModalOpen: false,
+      isCreatorModalOpen: false,
       messageContent: '',
       showMediaPreview: ref(false),
       previewType: ref(null),
@@ -523,6 +712,11 @@ export default {
              (this.post?.image && this.post?.audio) ||
              (this.post?.video && this.post?.audio) ||
              (Array.isArray(this.post?.images) && this.post?.images.length > 0);
+    },
+    coverPhotoStyle() {
+      return this.post?.user.coverPhoto 
+        ? { backgroundImage: `url(${this.post.user.coverPhoto})` } 
+        : { backgroundColor: '#e0e0e0' };
     }
   },
   async created() {
@@ -600,6 +794,18 @@ export default {
     getOffers(offersString) {
       return offersString.split(',').map(offer => offer.trim());
     },
+    getSocialIcon(platform) {
+      const platformLower = platform.toLowerCase();
+      if (platformLower.includes('facebook')) return 'facebook';
+      if (platformLower.includes('twitter') || platformLower.includes('x')) return 'twitter';
+      if (platformLower.includes('instagram')) return 'photo_camera';
+      if (platformLower.includes('linkedin')) return 'work';
+      if (platformLower.includes('youtube')) return 'smart_display';
+      if (platformLower.includes('tiktok')) return 'music_video';
+      if (platformLower.includes('spotify')) return 'headphones';
+      if (platformLower.includes('soundcloud')) return 'audiotrack';
+      return 'link';
+    },
     async openMessageModal() {
       if (!localStorage.getItem('token')) {
         const result = await Swal.fire({
@@ -624,9 +830,20 @@ export default {
       
       this.isModalOpen = true;
     },
+    openCreatorModal() {
+      this.isCreatorModalOpen = true;
+      
+      // Track click-through for viewing creator details
+      if (this.post && this.post.id) {
+        trackClickThrough('post', this.post.id, 'creator_details');
+      }
+    },
     closeMessageModal() {
       this.isModalOpen = false;
       this.messageContent = '';
+    },
+    closeCreatorModal() {
+      this.isCreatorModalOpen = false;
     },
     async sendMessage() {
       try {
@@ -690,6 +907,11 @@ export default {
     },
     viewCreatorProfile() {
       if (this.post && this.post.user && this.post.user.id) {
+        // Close modal if open
+        if (this.isCreatorModalOpen) {
+          this.closeCreatorModal();
+        }
+        
         // Track click-through from post to creator profile
         trackClickThrough('post', this.post.id, 'profile', this.post.user.id);
         
@@ -1866,6 +2088,411 @@ export default {
 
 .creator-avatar:hover {
   transform: scale(1.05);
+}
+
+/* Improved creator modal styles */
+.creator-modal-content {
+  background: white;
+  border-radius: 16px;
+  width: 95%;
+  max-width: 800px;
+  max-height: 90vh;
+  overflow-y: auto;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+  scrollbar-width: thin;
+}
+
+.creator-modal-body {
+  padding: 0;
+}
+
+.creator-profile-header {
+  position: relative;
+  margin-bottom: 100px;
+}
+
+.creator-cover-photo {
+  height: 220px;
+  background-size: cover;
+  background-position: center;
+  background-color: #444;
+  background-image: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  position: relative;
+  border-top-left-radius: 16px;
+  border-top-right-radius: 16px;
+}
+
+.creator-profile-main {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  bottom: -80px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+}
+
+.creator-avatar-large {
+  width: 150px;
+  height: 150px;
+  border-radius: 50%;
+  overflow: hidden;
+  background: linear-gradient(45deg, #5e35b1, #3f51b5);
+  border: 5px solid white;
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
+  transition: transform 0.3s ease;
+}
+
+.creator-avatar-large:hover {
+  transform: scale(1.05);
+}
+
+.creator-avatar-large img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.initials-avatar {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  font-size: 3rem;
+  font-weight: 700;
+  color: white;
+  background: linear-gradient(45deg, #5e35b1, #3f51b5);
+  text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.2);
+}
+
+.creator-main-info {
+  margin-top: 0.75rem;
+}
+
+.creator-main-info h2 {
+  margin: 0 0 0.5rem;
+  font-size: 1.85rem;
+  color: #333;
+  font-weight: 700;
+}
+
+.creator-badges {
+  display: flex;
+  justify-content: center;
+  gap: 1rem;
+}
+
+.creator-badge {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.35rem 0.75rem;
+  border-radius: 20px;
+  font-size: 0.9rem;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.07);
+}
+
+.creator-badge.verified {
+  color: #2196f3;
+  background: #e3f2fd;
+}
+
+.creator-badge.level {
+  color: #ff9800;
+  background: #fff3e0;
+}
+
+.creator-section {
+  padding: 1.75rem;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+}
+
+.creator-section:last-child {
+  border-bottom: none;
+}
+
+.creator-section h3 {
+  margin: 0 0 1.25rem;
+  color: #424242;
+  font-size: 1.2rem;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+}
+
+.creator-section h3::before {
+  content: "";
+  display: inline-block;
+  width: 4px;
+  height: 18px;
+  background: linear-gradient(to bottom, #673ab7, #3f51b5);
+  margin-right: 10px;
+  border-radius: 2px;
+}
+
+.creator-section p {
+  line-height: 1.7;
+  color: #555;
+  font-size: 1.05rem;
+}
+
+.creator-details-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 1.25rem;
+}
+
+.detail-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 1rem;
+  padding: 0.75rem;
+  border-radius: 10px;
+  background-color: rgba(0, 0, 0, 0.02);
+  transition: all 0.2s ease;
+}
+
+.detail-item:hover {
+  background-color: rgba(0, 0, 0, 0.04);
+}
+
+.detail-item i.material-icons {
+  color: #673ab7;
+  background: rgba(103, 58, 183, 0.1);
+  padding: 8px;
+  border-radius: 50%;
+  font-size: 1.1rem;
+}
+
+.detail-text {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.detail-label {
+  font-size: 0.85rem;
+  color: #666;
+}
+
+.detail-value {
+  font-size: 1.05rem;
+  font-weight: 500;
+  color: #333;
+}
+
+.offers-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
+.offer-tag {
+  background: linear-gradient(to right, rgba(103, 58, 183, 0.1), rgba(63, 81, 181, 0.1));
+  color: #673ab7;
+  padding: 0.35rem 0.9rem;
+  border-radius: 20px;
+  font-size: 0.95rem;
+  font-weight: 500;
+  transition: all 0.2s ease;
+}
+
+.offer-tag:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.07);
+}
+
+.document-links,
+.social-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+
+.document-link,
+.social-link {
+  display: flex;
+  align-items: center;
+  padding: 0.75rem 1.2rem;
+  border-radius: 10px;
+  text-decoration: none;
+  gap: 0.7rem;
+  transition: all 0.3s ease;
+  font-weight: 500;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.07);
+}
+
+.document-link {
+  color: #2196f3;
+  background: linear-gradient(to right, #e3f2fd, #bbdefb);
+}
+
+.social-link {
+  color: #673ab7;
+  background: linear-gradient(to right, #ede7f6, #d1c4e9);
+}
+
+.document-link:hover,
+.social-link:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 6px 12px rgba(0, 0, 0, 0.1);
+}
+
+.document-link i,
+.social-link i {
+  font-size: 1.3rem;
+}
+
+.view-full-profile {
+  background: linear-gradient(45deg, #673ab7, #3f51b5);
+  color: white;
+  padding: 0.85rem 1.2rem;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  font-weight: 600;
+  cursor: pointer;
+  border: none;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 10px rgba(103, 58, 183, 0.3);
+}
+
+.view-full-profile:hover {
+  background: linear-gradient(45deg, #5e35b1, #3949ab);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 14px rgba(103, 58, 183, 0.4);
+}
+
+.rating-stats {
+  display: flex;
+  justify-content: center;
+  padding: 1.5rem 0 0.5rem;
+  background: linear-gradient(to right, rgba(255, 215, 0, 0.05), rgba(255, 215, 0, 0.1));
+  border-radius: 12px;
+}
+
+.average-rating {
+  text-align: center;
+}
+
+.rating-value {
+  font-size: 3.5rem;
+  font-weight: bold;
+  color: #ff9800;
+  text-shadow: 1px 1px 0 rgba(0, 0, 0, 0.1);
+  line-height: 1;
+}
+
+.stars {
+  color: #ffd700;
+  margin: 0.5rem 0;
+}
+
+.stars .material-icons.filled {
+  color: #ffd700;
+  filter: drop-shadow(0 2px 3px rgba(0, 0, 0, 0.15));
+}
+
+.total-ratings {
+  color: #666;
+  font-size: 0.95rem;
+  font-weight: 500;
+}
+
+/* Modal footer */
+.modal-footer {
+  padding: 1.25rem 1.75rem;
+  border-top: 1px solid rgba(0, 0, 0, 0.06);
+  display: flex;
+  justify-content: flex-end;
+  gap: 1.2rem;
+}
+
+.cancel-btn {
+  background: linear-gradient(to right, #f5f5f5, #eeeeee);
+  color: #555;
+  border: none;
+  padding: 0.85rem 1.5rem;
+  border-radius: 10px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.cancel-btn:hover {
+  background: linear-gradient(to right, #eeeeee, #e0e0e0);
+}
+
+/* Update modal header */
+.modal-header {
+  padding: 1.25rem 1.75rem;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.modal-header h2 {
+  margin: 0;
+  font-size: 1.4rem;
+  font-weight: 600;
+  color: #333;
+}
+
+.close-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: #666;
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  transition: all 0.2s ease;
+}
+
+.close-btn:hover {
+  background: rgba(0, 0, 0, 0.05);
+  color: #333;
+}
+
+/* Mobile responsiveness */
+@media (max-width: 768px) {
+  .creator-details-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .creator-profile-main {
+    bottom: -70px;
+  }
+  
+  .creator-avatar-large {
+    width: 130px;
+    height: 130px;
+  }
+  
+  .creator-section {
+    padding: 1.25rem;
+  }
+  
+  .document-links, 
+  .social-links {
+    justify-content: center;
+  }
+  
+  .modal-footer {
+    flex-direction: column-reverse;
+  }
+  
+  .modal-footer button {
+    width: 100%;
+  }
 }
 </style>
   

@@ -80,31 +80,150 @@
   <div class="notifications-panel" v-if="showNotifications" :class="{ 'panel-active': showNotifications }">
     <div class="panel-header">
       <h3>Notifications</h3>
-      <button class="close-button" @click="showNotifications = false">
-        <i class="material-icons">close</i>
+      <div class="panel-actions">
+        <button v-if="totalNotifications > 0" class="mark-read-button" @click="handleMarkAllAsRead">
+          Mark all as read
+        </button>
+        <button class="close-button" @click="showNotifications = false">
+          <i class="material-icons">close</i>
+        </button>
+      </div>
+    </div>
+    
+    <div class="notification-tabs">
+      <button 
+        class="tab-button" 
+        :class="{ active: activeTab === 'all' }" 
+        @click="activeTab = 'all'"
+      >
+        All
+      </button>
+      <button 
+        class="tab-button" 
+        :class="{ active: activeTab === 'messages' }" 
+        @click="activeTab = 'messages'"
+      >
+        Messages
+        <span v-if="messageNotifications.length > 0" class="tab-badge">{{ messageNotifications.length }}</span>
+      </button>
+      <button 
+        class="tab-button" 
+        :class="{ active: activeTab === 'system' }" 
+        @click="activeTab = 'system'"
+      >
+        System
+        <span v-if="systemNotifications.length > 0" class="tab-badge">{{ systemNotifications.length }}</span>
       </button>
     </div>
-    <div class="notification-list">
-      <!-- Message notifications - limited to 5 -->
-      <div class="notification-item unread" v-for="(notification, index) in messageNotifications.slice(0, 5)" :key="index" @click="goToMessages(notification.senderId)">
-        <div class="notification-avatar blue">
-          <i class="material-icons">message</i>
-        </div>
-        <div class="notification-content">
-          <p class="notification-text"><strong>{{ notification.senderName }}</strong> sent you a message</p>
-          <p class="notification-preview">{{ truncateMessage(notification.content) }}</p>
-          <p class="notification-time">{{ formatTime(notification.time) }}</p>
-        </div>
-      </div>
-      
-      <!-- Show empty state if no notifications -->
-      <div class="empty-notifications" v-if="messageNotifications.length === 0">
-        <i class="material-icons">notifications_none</i>
-        <p>No new notifications</p>
-      </div>
+    
+    <div v-if="isLoadingNotifications" class="notification-loading">
+      <div class="spinner"></div>
+      <p>Loading notifications...</p>
     </div>
+    
+    <div v-else class="notification-list">
+      <!-- All notifications tab -->
+      <template v-if="activeTab === 'all'">
+        <!-- System notifications -->
+        <div 
+          class="notification-item" 
+          :class="{ unread: !notification.read }" 
+          v-for="notification in systemNotifications" 
+          :key="`system-${notification.id}`"
+          @click="handleNotificationClick(notification)"
+        >
+          <div class="notification-avatar" :class="getNotificationColor(notification.type)">
+            <i class="material-icons">{{ getNotificationIcon(notification.type) }}</i>
+          </div>
+          <div class="notification-content">
+            <p class="notification-text">{{ notification.title }}</p>
+            <p class="notification-preview" v-html="truncateHTML(notification.message)"></p>
+            <p class="notification-time">{{ formatTime(notification.createdAt) }}</p>
+          </div>
+        </div>
+
+        <!-- Message notifications -->
+        <div 
+          class="notification-item" 
+          :class="{ unread: true }" 
+          v-for="(notification, index) in messageNotifications" 
+          :key="`message-${index}`" 
+          @click="goToMessages(notification.senderId)"
+        >
+          <div class="notification-avatar blue">
+            <i class="material-icons">message</i>
+          </div>
+          <div class="notification-content">
+            <p class="notification-text"><strong>{{ notification.senderName }}</strong> sent you a message</p>
+            <p class="notification-preview">{{ truncateMessage(notification.content) }}</p>
+            <p class="notification-time">{{ formatTime(notification.time) }}</p>
+          </div>
+        </div>
+        
+        <!-- Show empty state if no notifications -->
+        <div class="empty-notifications" v-if="totalNotifications === 0">
+          <i class="material-icons">notifications_none</i>
+          <p>No new notifications</p>
+        </div>
+      </template>
+      
+      <!-- Messages tab -->
+      <template v-else-if="activeTab === 'messages'">
+        <div 
+          class="notification-item unread" 
+          v-for="(notification, index) in messageNotifications" 
+          :key="`message-tab-${index}`" 
+          @click="goToMessages(notification.senderId)"
+        >
+          <div class="notification-avatar blue">
+            <i class="material-icons">message</i>
+          </div>
+          <div class="notification-content">
+            <p class="notification-text"><strong>{{ notification.senderName }}</strong> sent you a message</p>
+            <p class="notification-preview">{{ truncateMessage(notification.content) }}</p>
+            <p class="notification-time">{{ formatTime(notification.time) }}</p>
+          </div>
+        </div>
+        
+        <div class="empty-notifications" v-if="messageNotifications.length === 0">
+          <i class="material-icons">forum</i>
+          <p>No new messages</p>
+        </div>
+      </template>
+      
+      <!-- System tab -->
+      <template v-else-if="activeTab === 'system'">
+        <div 
+          class="notification-item" 
+          :class="{ unread: !notification.read }" 
+          v-for="notification in systemNotifications" 
+          :key="`system-tab-${notification.id}`"
+          @click="handleNotificationClick(notification)"
+        >
+          <div class="notification-avatar" :class="getNotificationColor(notification.type)">
+            <i class="material-icons">{{ getNotificationIcon(notification.type) }}</i>
+          </div>
+          <div class="notification-content">
+            <p class="notification-text">{{ notification.title }}</p>
+            <p class="notification-preview" v-html="truncateHTML(notification.message)"></p>
+            <p class="notification-time">{{ formatTime(notification.createdAt) }}</p>
+          </div>
+        </div>
+        
+        <div class="empty-notifications" v-if="systemNotifications.length === 0">
+          <i class="material-icons">system_update</i>
+          <p>No system notifications</p>
+        </div>
+      </template>
+    </div>
+    
     <div class="panel-footer">
-      <button class="see-all-button" @click="goToMessages()">See all messages</button>
+      <button class="see-all-button" @click="goToMessages()" v-if="activeTab === 'messages' || activeTab === 'all'">
+        See all messages
+      </button>
+      <router-link to="/notifications" class="see-all-button" v-if="activeTab === 'system' || activeTab === 'all'" @click="showNotifications = false">
+        See all notifications
+      </router-link>
     </div>
   </div>
 
@@ -138,7 +257,7 @@
 </template>
 
 <script>
-import { logoutUser, fetchUsersWithChatHistory } from '../authService';
+import { logoutUser, fetchUsersWithChatHistory, fetchUserNotifications, markAllNotificationsAsRead, markNotificationAsRead } from '../authService';
 import { useRouter } from 'vue-router';
 import Swal from 'sweetalert2/dist/sweetalert2.js';
 import 'sweetalert2/dist/sweetalert2.min.css';
@@ -157,7 +276,8 @@ export default {
         admin: [
           { name: 'Dashboard', path: '/admin-dashboard', icon: 'dashboard' },
           { name: 'Manage Users', path: '/admin/users', icon: 'people' },
-          { name: 'Manage Posts', path: '/admin/posts', icon: 'assignment' },
+          { name: 'Users Under Review', path: '/admin/reviews', icon: 'gavel' },
+          { name: 'Analytics', path: '/admin/analytics', icon: 'analytics' },
           { name: 'Profile', path: '/profile', icon: 'person' },
         ],
         creator: [
@@ -179,15 +299,21 @@ export default {
       showProfileMenu: false,
       showNotifications: false,
       userInitials: 'TU',
-      notificationCount: 3,
+      notificationCount: 0,
       searchQuery: '',
       isSearchFocused: false,
       messageNotifications: [],
+      systemNotifications: [],
+      isLoadingNotifications: false,
+      totalNotifications: 0,
+      activeTab: 'all',
+      currentUserId: null,
     };
   },
   async created() {
     this.userRole = localStorage.getItem('userRole');
     this.userName = localStorage.getItem('userName') || 'TuneUp User';
+    this.currentUserId = parseInt(localStorage.getItem('userId')) || null;
     
     // Calculate user initials from name if available
     if (this.userName && this.userName !== 'TuneUp User') {
@@ -202,11 +328,20 @@ export default {
     // Close profile menu when clicking outside
     document.addEventListener('click', this.handleClickOutside);
     
-    // Fetch message notifications
-    await this.fetchMessageNotifications();
+    // Set default active tab
+    this.activeTab = 'all';
+    
+    // Fetch notifications
+    await this.fetchAllNotifications();
+    
+    // Set up polling for new notifications every 2 minutes
+    this.notificationInterval = setInterval(() => {
+      this.fetchAllNotifications();
+    }, 120000);
   },
   beforeUnmount() {
     document.removeEventListener('click', this.handleClickOutside);
+    clearInterval(this.notificationInterval);
   },
   computed: {
     isLoggedIn() {
@@ -236,6 +371,8 @@ export default {
       // Close profile menu when opening notifications
       if (this.showNotifications) {
         this.showProfileMenu = false;
+        // Fetch latest notifications when panel is opened
+        this.fetchAllNotifications();
       }
     },
     handleClickOutside(event) {
@@ -301,11 +438,33 @@ export default {
           }))
           .sort((a, b) => b.time - a.time); // Sort by most recent
           
-        // Update notification count
-        this.notificationCount = this.messageNotifications.length;
+        this.updateNotificationCount();
       } catch (error) {
         console.error('Error fetching message notifications:', error);
       }
+    },
+    async fetchSystemNotifications() {
+      try {
+        this.isLoadingNotifications = true;
+        const result = await fetchUserNotifications(20, 0, false);
+        this.systemNotifications = result.notifications;
+        this.updateNotificationCount();
+      } catch (error) {
+        console.error('Error fetching system notifications:', error);
+      } finally {
+        this.isLoadingNotifications = false;
+      }
+    },
+    async fetchAllNotifications() {
+      await Promise.all([
+        this.fetchMessageNotifications(),
+        this.fetchSystemNotifications()
+      ]);
+    },
+    updateNotificationCount() {
+      this.totalNotifications = this.messageNotifications.length + 
+        this.systemNotifications.filter(n => !n.read).length;
+      this.notificationCount = this.totalNotifications;
     },
     truncateMessage(message) {
       // Check if it's a payment message
@@ -319,6 +478,13 @@ export default {
       }
       
       return message.length > 30 ? message.substring(0, 27) + '...' : message;
+    },
+    truncateHTML(html) {
+      // Strip HTML tags for preview
+      const div = document.createElement('div');
+      div.innerHTML = html;
+      const text = div.textContent || div.innerText || '';
+      return text.length > 50 ? text.substring(0, 47) + '...' : text;
     },
     formatTime(timestamp) {
       const date = new Date(timestamp);
@@ -346,6 +512,76 @@ export default {
         this.router.push('/messages');
       }
     },
+    getNotificationIcon(type) {
+      switch (type) {
+        case 'copyright_strike':
+          return 'copyright';
+        case 'account_review':
+          return 'account_circle';
+        case 'admin_alert':
+          return 'admin_panel_settings';
+        case 'payment':
+          return 'payment';
+        case 'system':
+          return 'announcement';
+        default:
+          return 'notifications';
+      }
+    },
+    getNotificationColor(type) {
+      switch (type) {
+        case 'copyright_strike':
+          return 'red';
+        case 'account_review':
+          return 'orange';
+        case 'admin_alert':
+          return 'purple';
+        case 'payment':
+          return 'green';
+        case 'system':
+          return 'blue';
+        default:
+          return 'blue';
+      }
+    },
+    async handleNotificationClick(notification) {
+      // Mark notification as read
+      try {
+        await markNotificationAsRead(notification.id);
+        // Update the notification status in local state without removing it
+        const index = this.systemNotifications.findIndex(n => n.id === notification.id);
+        if (index !== -1) {
+          this.systemNotifications[index].read = true;
+          this.updateNotificationCount();
+        }
+        
+        // Handle different notification types
+        if (notification.type === 'copyright_strike') {
+          this.showNotifications = false;
+          this.router.push('/creatorpost');
+        } else if (notification.type === 'account_review') {
+          this.showNotifications = false;
+          this.router.push('/profile');
+        } else if (notification.type === 'admin_alert') {
+          this.showNotifications = false;
+          if (this.userRole === 'admin') {
+            this.router.push('/admin/reviews');
+          }
+        }
+      } catch (error) {
+        console.error('Error handling notification click:', error);
+      }
+    },
+    async handleMarkAllAsRead() {
+      try {
+        await markAllNotificationsAsRead();
+        // Update all notifications to read in local state
+        this.systemNotifications = this.systemNotifications.map(n => ({ ...n, read: true }));
+        this.updateNotificationCount();
+      } catch (error) {
+        console.error('Error marking all notifications as read:', error);
+      }
+    }
   },
 };
 </script>
@@ -828,19 +1064,20 @@ export default {
 }
 
 .panel-footer {
+  display: flex;
   padding: 12px 16px;
   border-top: 1px solid #dadde1;
-  text-align: center;
+  gap: 8px;
 }
 
 .see-all-button {
+  flex: 1;
   background: none;
   border: none;
   color: #1877f2;
   font-weight: bold;
   cursor: pointer;
   padding: 8px 16px;
-  width: 100%;
   border-radius: 4px;
   transition: background-color 0.2s ease;
 }
@@ -991,5 +1228,191 @@ export default {
   font-size: 48px;
   margin-bottom: 10px;
   color: #dadde1;
+}
+
+/* Panel Header Updates */
+.panel-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px;
+  border-bottom: 1px solid #dadde1;
+}
+
+.panel-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.mark-read-button {
+  background: none;
+  border: none;
+  color: #1877f2;
+  font-size: 12px;
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: 4px;
+  transition: background-color 0.2s ease;
+}
+
+.mark-read-button:hover {
+  background-color: rgba(24, 119, 242, 0.1);
+}
+
+/* Notification Tabs */
+.notification-tabs {
+  display: flex;
+  border-bottom: 1px solid #dadde1;
+}
+
+.tab-button {
+  flex: 1;
+  padding: 12px 16px;
+  background: none;
+  border: none;
+  color: #65676B;
+  font-weight: 500;
+  cursor: pointer;
+  position: relative;
+  transition: color 0.2s ease;
+}
+
+.tab-button.active {
+  color: #1877f2;
+}
+
+.tab-button.active::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  height: 3px;
+  background-color: #1877f2;
+  animation: slideIn 0.3s ease;
+}
+
+.tab-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: #e41e3f;
+  color: white;
+  border-radius: 10px;
+  height: 18px;
+  min-width: 18px;
+  padding: 0 6px;
+  font-size: 12px;
+  margin-left: 6px;
+  font-weight: bold;
+}
+
+/* Loading animation */
+.notification-loading {
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  color: #65676B;
+}
+
+.spinner {
+  width: 28px;
+  height: 28px;
+  border: 3px solid #f0f2f5;
+  border-radius: 50%;
+  border-top-color: #1877f2;
+  animation: spin 1s linear infinite;
+  margin-bottom: 12px;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Notification item updates */
+.notification-item {
+  display: flex;
+  padding: 12px 16px;
+  border-bottom: 1px solid #f0f2f5;
+  transition: background-color 0.2s ease;
+  cursor: pointer;
+}
+
+.notification-item:hover {
+  background-color: #f0f2f5;
+}
+
+.notification-item.unread {
+  background-color: #e7f3ff;
+}
+
+.notification-item.unread:hover {
+  background-color: #daeafd;
+}
+
+/* Notification Avatar Color Extensions */
+.notification-avatar.red {
+  background-color: #e41e3f;
+}
+
+.notification-avatar.orange {
+  background-color: #F7931A;
+}
+
+.notification-avatar.green {
+  background-color: #42b72a;
+}
+
+.notification-avatar.purple {
+  background-color: #8a3ab9;
+}
+
+.notification-avatar.blue {
+  background-color: #1877f2;
+}
+
+/* Empty notification styling updates */
+.empty-notifications {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 30px 0;
+  color: #65676B;
+}
+
+.empty-notifications i {
+  font-size: 48px;
+  margin-bottom: 10px;
+  color: #dadde1;
+}
+
+/* Updated Panel Footer */
+.panel-footer {
+  display: flex;
+  padding: 12px 16px;
+  border-top: 1px solid #dadde1;
+  gap: 8px;
+}
+
+.see-all-button {
+  flex: 1;
+  background: none;
+  border: none;
+  color: #1877f2;
+  font-weight: bold;
+  cursor: pointer;
+  padding: 8px 16px;
+  border-radius: 4px;
+  transition: background-color 0.2s ease;
+}
+
+.see-all-button:hover {
+  background-color: #f0f2f5;
 }
 </style>

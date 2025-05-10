@@ -172,6 +172,9 @@ const handleGoogleLogin = async () => {
               {{ showPassword ? 'visibility_off' : 'visibility' }}
             </i>
           </div>
+          <div class="forgot-password">
+            <router-link to="/forgot-password">Forgot Password?</router-link>
+          </div>
         </div>
 
         <button type="submit" class="submit-btn" :disabled="loading">
@@ -448,5 +451,22 @@ const handleGoogleLogin = async () => {
 .google-btn img {
   width: 20px;
   height: 20px;
+}
+
+.forgot-password {
+  text-align: right;
+  margin-top: 0.5rem;
+  font-size: 0.9rem;
+}
+
+.forgot-password a {
+  color: #2196f3;
+  text-decoration: none;
+  transition: all 0.2s;
+}
+
+.forgot-password a:hover {
+  color: #1976d2;
+  text-decoration: underline;
 }
 </style>

@@ -136,7 +136,10 @@
             <h3>{{ post.title }}</h3>
             <p>{{ post.description }}</p>
             <div class="creator-info">
-              <img :src="post.user.avatar" :alt="post.user.firstName" class="creator-avatar" />
+              <div class="creator-avatar" @click.stop="viewCreatorProfile(post.user.id, post.id)">
+                <img v-if="post.user.profilePicture" :src="post.user.profilePicture" :alt="post.user.firstName" />
+                <template v-else>{{ getInitials(post.user.firstName, post.user.lastName) }}</template>
+              </div>
               <div class="creator-details">
                 <h4 @click.stop="viewCreatorProfile(post.user.id, post.id)" class="clickable-name">
                   {{ post.user.firstName }} {{ post.user.lastName }}
@@ -183,7 +186,8 @@
             <div class="post-footer">
               <div class="creator-info">
                 <div class="creator-avatar" @click.stop="viewCreatorProfile(post.user.id, post.id)">
-                  {{ getInitials(post.user.firstName, post.user.lastName) }}
+                  <img v-if="post.user.profilePicture" :src="post.user.profilePicture" :alt="post.user.firstName" />
+                  <template v-else>{{ getInitials(post.user.firstName, post.user.lastName) }}</template>
                 </div>
                 <div class="creator-details">
                   <h4 @click.stop="viewCreatorProfile(post.user.id, post.id)" class="clickable-name">
@@ -857,6 +861,15 @@ export default {
   align-items: center;
   justify-content: center;
   font-weight: 600;
+  overflow: hidden;
+  cursor: pointer;
+  transition: transform 0.2s;
+}
+
+.creator-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
 }
 
 .creator-details h4 {

@@ -36,23 +36,52 @@ const handleRegister = async () => {
   try {
     loading.value = true;
 
-    await registerUser(form.value);
-    Swal.fire({
-      title: 'Success!',
-      text: 'Registration successful! Check your email for a verification code.',
-      icon: 'success',
-      confirmButtonText: 'OK'
-    });
+    const response = await registerUser(form.value);
+    
+    // Check if this was a resend of verification code
+    if (response.resent) {
+      Swal.fire({
+        title: 'Verification Code Resent!',
+        text: 'We found your unverified account and sent a new verification code to your email.',
+        icon: 'info',
+        confirmButtonText: 'OK'
+      });
+    } else {
+      Swal.fire({
+        title: 'Success!',
+        text: 'Registration successful! Check your email for a verification code.',
+        icon: 'success',
+        confirmButtonText: 'OK'
+      });
+    }
 
     showModal.value = true; // Show the verification modal
   } catch (error) {
     console.error("Registration failed:", error);
-    Swal.fire({
-      title: 'Error!',
-      text: 'Registration failed. Try again.',
-      icon: 'error',
-      confirmButtonText: 'OK'
-    });
+    
+    // Check if the error is about email already in use
+    if (error.response && error.response.status === 409) {
+      Swal.fire({
+        title: 'Email Already Registered',
+        text: error.response.data.error || 'This email is already registered and verified. Please log in instead.',
+        icon: 'warning',
+        confirmButtonText: 'Go to Login',
+        showCancelButton: true,
+        cancelButtonText: 'Stay Here'
+      }).then((result) => {
+        if (result.isConfirmed) {
+          // Redirect to login page
+          window.location.href = "/login";
+        }
+      });
+    } else {
+      Swal.fire({
+        title: 'Error!',
+        text: error.response?.data?.error || 'Registration failed. Try again.',
+        icon: 'error',
+        confirmButtonText: 'OK'
+      });
+    }
   } finally {
     loading.value = false;
   }
@@ -79,12 +108,34 @@ const handleVerify = async () => {
     window.location.href = "/dashboard"; // Redirect to dashboard or home
   } catch (error) {
     console.error("Verification failed:", error);
-    Swal.fire({
-      title: 'Error!',
-      text: 'Invalid verification code.',
-      icon: 'error',
-      confirmButtonText: 'OK'
-    });
+    
+    // Check if verification code expired
+    if (error.message && error.message.includes('expired')) {
+      Swal.fire({
+        title: 'Verification Code Expired',
+        text: 'Your verification code has expired. You will need to register again to receive a new code.',
+        icon: 'warning',
+        confirmButtonText: 'OK'
+      }).then(() => {
+        showModal.value = false; // Hide modal
+        // Reset the form
+        form.value = {
+          email: "",
+          password: "",
+          firstName: "",
+          lastName: "",
+          phoneNumber: "",
+          dateOfBirth: "",
+        };
+      });
+    } else {
+      Swal.fire({
+        title: 'Error!',
+        text: error.message || 'Invalid verification code.',
+        icon: 'error',
+        confirmButtonText: 'OK'
+      });
+    }
   } finally {
     loading.value = false;
   }
