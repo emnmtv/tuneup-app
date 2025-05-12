@@ -73,6 +73,9 @@
           <button class="action-button hide-on-mobile">
             <i class="material-icons">videocam</i>
           </button>
+          <button class="action-button" @click="openReportModal">
+            <i class="material-icons">flag</i>
+          </button>
           <button class="action-button">
             <i class="material-icons">info</i>
           </button>
@@ -198,12 +201,143 @@
         </div>
       </div>
     </div>
+
+    <!-- Add Report Modal -->
+    <div v-if="showReportModal" class="modal-overlay" @click="closeReportModal">
+      <div class="modal-content report-modal" @click.stop>
+        <div class="modal-header report-header">
+          <div class="report-header-content">
+            <div class="report-icon-wrapper">
+              <i class="material-icons">report_problem</i>
+            </div>
+            <h2>Report Inappropriate Behavior</h2>
+          </div>
+          <button class="close-btn" @click="closeReportModal">
+            <i class="material-icons">close</i>
+          </button>
+        </div>
+        
+        <div class="modal-body report-body">
+          <div class="report-steps">
+            <div class="report-step active">
+              <div class="step-number">1</div>
+              <div class="step-label">Report Details</div>
+            </div>
+            <div class="report-step-line"></div>
+            <div class="report-step">
+              <div class="step-number">2</div>
+              <div class="step-label">Review</div>
+            </div>
+            <div class="report-step-line"></div>
+            <div class="report-step">
+              <div class="step-number">3</div>
+              <div class="step-label">Submit</div>
+            </div>
+          </div>
+          
+          <div class="report-form">
+            <div class="form-group">
+              <label>What type of issue are you reporting?</label>
+              <div class="report-categories">
+                <div 
+                  v-for="category in reportCategories" 
+                  :key="category.value"
+                  :class="['category-option', reportData.category === category.value ? 'selected' : '']"
+                  @click="reportData.category = category.value"
+                >
+                  <i class="material-icons">{{ category.icon }}</i>
+                  <span>{{ category.label }}</span>
+                </div>
+              </div>
+            </div>
+            
+            <div class="form-group">
+              <label>Provide a brief summary</label>
+              <input 
+                v-model="reportData.reason" 
+                type="text" 
+                placeholder="Brief reason for reporting"
+                class="report-input"
+              />
+            </div>
+            
+            <div class="form-group">
+              <label>Additional details</label>
+              <div class="textarea-counter">
+                <textarea 
+                  v-model="reportData.details" 
+                  placeholder="Please provide specific examples of the behavior you're reporting..."
+                  class="report-textarea"
+                  rows="4"
+                  maxlength="500"
+                ></textarea>
+                <div class="character-count" :class="{ 'limit-close': reportData.details.length > 400 }">
+                  {{ reportData.details.length }}/500
+                </div>
+              </div>
+            </div>
+            
+            <div class="form-group">
+              <label>Evidence (Optional)</label>
+              <div class="evidence-upload-area" @click="triggerFileInput" @dragover.prevent @drop.prevent="handleFileDrop">
+                <input 
+                  type="file" 
+                  ref="fileInput"
+                  @change="handleEvidenceUpload" 
+                  accept="image/*"
+                  class="report-file-input"
+                  id="reportEvidence"
+                />
+                
+                <div v-if="!reportData.evidenceImage" class="upload-placeholder">
+                  <i class="material-icons">cloud_upload</i>
+                  <p>Drag screenshot here or click to upload</p>
+                  <span>Max file size: 10MB</span>
+                </div>
+                
+                <div v-else class="upload-preview">
+                  <img :src="previewImage" alt="Evidence preview" class="evidence-preview"/>
+                  <div class="preview-overlay">
+                    <div class="preview-actions">
+                      <button class="preview-action" @click.stop="removeFile">
+                        <i class="material-icons">delete</i>
+                      </button>
+                      <button class="preview-action" @click.stop="replaceFile">
+                        <i class="material-icons">refresh</i>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <div class="modal-footer report-footer">
+          <div class="report-notice">
+            <i class="material-icons">info</i>
+            <span>Your report will be reviewed by our moderation team and kept confidential.</span>
+          </div>
+          <div class="report-actions">
+            <button class="cancel-btn" @click="closeReportModal">Cancel</button>
+            <button 
+              class="submit-report-btn" 
+              @click="submitReport"
+              :disabled="!reportData.category || !reportData.reason"
+            >
+              Submit Report
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
 <script>
-import { sendMessage, fetchMessages, fetchUsersWithChatHistory, initiatePayment, getUserIdFromToken, checkPaymentStatus } from '../authService';
+import { sendMessage, fetchMessages, fetchUsersWithChatHistory, initiatePayment, getUserIdFromToken, checkPaymentStatus, reportUser } from '../authService';
 import io from 'socket.io-client';
+import Swal from 'sweetalert2';
 
 export default {
   data() {
@@ -224,6 +358,22 @@ export default {
       isMobileView: false,
       showSidebar: true,
       isPaymentLoading: false,
+      showReportModal: false,
+      reportData: {
+        category: '',
+        reason: '',
+        details: '',
+        evidenceImage: null
+      },
+      previewImage: null,
+      reportCategories: [
+        { value: 'harassment', label: 'Harassment', icon: 'person_off' },
+        { value: 'inappropriate', label: 'Inappropriate Content', icon: 'block' },
+        { value: 'spam', label: 'Spam', icon: 'mark_chat_unread' },
+        { value: 'scam', label: 'Scam', icon: 'policy' },
+        { value: 'copyright', label: 'Copyright Violation', icon: 'copyright' },
+        { value: 'other', label: 'Other', icon: 'more_horiz' }
+      ]
     };
   },
   async created() {
@@ -265,6 +415,8 @@ export default {
       this.socket.disconnect();
     }
     window.removeEventListener('resize', this.checkMobileView);
+    // Remove event listener for escape key
+    document.removeEventListener('keydown', this.handleEscapeKey);
   },
   computed: {
     selectedUserInitials() {
@@ -567,6 +719,119 @@ export default {
     togglePaymentDrawer() {
       this.showPaymentDrawer = !this.showPaymentDrawer;
     },
+    openReportModal() {
+      if (!localStorage.getItem('token')) {
+        Swal.fire({
+          title: 'Login Required',
+          text: 'You need to be logged in to report a user',
+          icon: 'info',
+          showCancelButton: true,
+          confirmButtonText: 'Login',
+          cancelButtonText: 'Cancel'
+        }).then((result) => {
+          if (result.isConfirmed) {
+            this.$router.push('/login');
+          }
+        });
+        return;
+      }
+      this.showReportModal = true;
+    },
+    
+    closeReportModal() {
+      this.showReportModal = false;
+      this.reportData = {
+        category: '',
+        reason: '',
+        details: '',
+        evidenceImage: null
+      };
+    },
+    
+    triggerFileInput() {
+      this.$refs.fileInput.click();
+    },
+    
+    handleFileDrop(event) {
+      const file = event.dataTransfer.files[0];
+      if (file && file.type.startsWith('image/')) {
+        this.handleFileSelection(file);
+      }
+    },
+    
+    handleEvidenceUpload(event) {
+      const file = event.target.files[0];
+      if (file) {
+        this.handleFileSelection(file);
+      }
+    },
+    
+    handleFileSelection(file) {
+      if (file.size > 10 * 1024 * 1024) { // 10MB limit
+        Swal.fire({
+          icon: 'error',
+          title: 'File too large',
+          text: 'Evidence image must be less than 10MB'
+        });
+        this.$refs.fileInput.value = '';
+        return;
+      }
+      this.reportData.evidenceImage = file;
+      this.createImagePreview(file);
+    },
+    
+    createImagePreview(file) {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        this.previewImage = e.target.result;
+      };
+      reader.readAsDataURL(file);
+    },
+    
+    removeFile() {
+      this.reportData.evidenceImage = null;
+      this.previewImage = null;
+      this.$refs.fileInput.value = '';
+    },
+    
+    replaceFile() {
+      this.$refs.fileInput.click();
+    },
+    
+    async submitReport() {
+      try {
+        if (!this.selectedReceiverId) {
+          throw new Error('No user selected to report');
+        }
+        
+        await reportUser({
+          reportedUserId: this.selectedReceiverId,
+          ...this.reportData
+        }, this.reportData.evidenceImage);
+        
+        this.closeReportModal();
+        
+        Swal.fire({
+          icon: 'success',
+          title: 'Report Submitted',
+          text: 'Thank you for your report. Our team will review it shortly.',
+          timer: 3000,
+          showConfirmButton: false
+        });
+      } catch (error) {
+        console.error('Error submitting report:', error);
+        Swal.fire({
+          icon: 'error',
+          title: 'Error',
+          text: error.message || 'Failed to submit report'
+        });
+      }
+    },
+    handleEscapeKey(event) {
+      if (event.key === 'Escape' && this.showReportModal) {
+        this.closeReportModal();
+      }
+    }
   },
   watch: {
     selectedUserMessages() {
@@ -574,6 +839,10 @@ export default {
         this.scrollToBottom();
       });
     }
+  },
+  mounted() {
+    // Add event listener for escape key
+    document.addEventListener('keydown', this.handleEscapeKey);
   }
 };
 </script>
@@ -1461,6 +1730,486 @@ export default {
 @keyframes spin {
   0% { transform: rotate(0deg); }
   100% { transform: rotate(360deg); }
+}
+
+/* Report Modal Styles - Enhanced */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.7);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 2000;
+  backdrop-filter: blur(5px);
+  animation: fadeIn 0.3s ease;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.report-modal {
+  max-width: 650px;
+  width: 90%;
+  max-height: 90vh;
+  overflow-y: auto;
+  animation: scaleIn 0.3s ease;
+  border-radius: 16px;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.3);
+  background: #fff;
+  display: flex;
+  flex-direction: column;
+}
+
+@keyframes scaleIn {
+  from { transform: scale(0.9); opacity: 0; }
+  to { transform: scale(1); opacity: 1; }
+}
+
+.report-header {
+  background: #1a237e;
+  color: white;
+  padding: 20px 24px;
+  border-radius: 16px 16px 0 0;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: none;
+}
+
+.report-header-content {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.report-icon-wrapper {
+  width: 40px;
+  height: 40px;
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.report-icon-wrapper i {
+  font-size: 24px;
+}
+
+.report-header h2 {
+  color: white;
+  margin: 0;
+  font-size: 1.4rem;
+  font-weight: 600;
+}
+
+.report-header .close-btn {
+  color: white;
+  background: rgba(255, 255, 255, 0.15);
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.2s;
+}
+
+.report-header .close-btn:hover {
+  background: rgba(255, 255, 255, 0.3);
+}
+
+.report-body {
+  padding: 24px;
+}
+
+.report-steps {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 30px;
+}
+
+.report-step {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  position: relative;
+}
+
+.step-number {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: #e0e0e0;
+  color: #757575;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 600;
+  font-size: 14px;
+}
+
+.report-step.active .step-number {
+  background: #1a237e;
+  color: white;
+}
+
+.step-label {
+  font-size: 12px;
+  color: #757575;
+  font-weight: 500;
+}
+
+.report-step.active .step-label {
+  color: #1a237e;
+  font-weight: 600;
+}
+
+.report-step-line {
+  flex: 1;
+  height: 2px;
+  background: #e0e0e0;
+  margin: 0 10px;
+  margin-bottom: 22px;
+}
+
+.report-form {
+  margin-top: 20px;
+}
+
+.form-group {
+  margin-bottom: 24px;
+}
+
+.form-group label {
+  display: block;
+  margin-bottom: 10px;
+  font-weight: 600;
+  color: #333;
+  font-size: 15px;
+}
+
+.report-categories {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+}
+
+.category-option {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 16px 10px;
+  background: #f5f5f5;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.2s;
+  border: 2px solid transparent;
+  text-align: center;
+}
+
+.category-option i {
+  font-size: 28px;
+  color: #616161;
+  margin-bottom: 8px;
+}
+
+.category-option span {
+  font-size: 13px;
+  color: #424242;
+  font-weight: 500;
+}
+
+.category-option:hover {
+  background: #f0f0f0;
+  transform: translateY(-2px);
+}
+
+.category-option.selected {
+  border-color: #1a237e;
+  background: rgba(26, 35, 126, 0.05);
+}
+
+.category-option.selected i {
+  color: #1a237e;
+}
+
+.category-option.selected span {
+  color: #1a237e;
+  font-weight: 600;
+}
+
+.report-input,
+.report-textarea {
+  width: 100%;
+  padding: 14px;
+  border: 1px solid #e0e0e0;
+  border-radius: 10px;
+  font-size: 14px;
+  background-color: #fff;
+  transition: all 0.2s;
+}
+
+.report-input:focus,
+.report-textarea:focus {
+  border-color: #1a237e;
+  box-shadow: 0 0 0 2px rgba(26, 35, 126, 0.15);
+  outline: none;
+}
+
+.textarea-counter {
+  position: relative;
+}
+
+.character-count {
+  position: absolute;
+  bottom: 8px;
+  right: 12px;
+  font-size: 12px;
+  color: #757575;
+}
+
+.character-count.limit-close {
+  color: #f44336;
+  font-weight: 600;
+}
+
+.report-textarea {
+  resize: vertical;
+  min-height: 100px;
+  padding-bottom: 30px;
+  font-family: inherit;
+}
+
+.evidence-upload-area {
+  border: 2px dashed #c5cae9;
+  border-radius: 12px;
+  padding: 20px;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.2s;
+  background: #f5f7ff;
+  position: relative;
+  overflow: hidden;
+}
+
+.evidence-upload-area:hover {
+  border-color: #1a237e;
+  background: #e8eaf6;
+}
+
+.report-file-input {
+  display: none;
+}
+
+.upload-placeholder {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 30px 0;
+}
+
+.upload-placeholder i {
+  font-size: 40px;
+  color: #9fa8da;
+  margin-bottom: 12px;
+}
+
+.upload-placeholder p {
+  margin: 0 0 8px;
+  font-size: 15px;
+  color: #3949ab;
+  font-weight: 500;
+}
+
+.upload-placeholder span {
+  font-size: 13px;
+  color: #757575;
+}
+
+.upload-preview {
+  position: relative;
+  width: 100%;
+  height: 200px;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.evidence-preview {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.preview-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  transition: all 0.2s;
+}
+
+.upload-preview:hover .preview-overlay {
+  background: rgba(0, 0, 0, 0.5);
+  opacity: 1;
+}
+
+.preview-actions {
+  display: flex;
+  gap: 16px;
+}
+
+.preview-action {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: white;
+  border: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+  transition: all 0.2s;
+}
+
+.preview-action:hover {
+  transform: scale(1.1);
+}
+
+.preview-action i {
+  font-size: 20px;
+}
+
+.preview-action:first-child i {
+  color: #f44336;
+}
+
+.preview-action:last-child i {
+  color: #4caf50;
+}
+
+.report-footer {
+  padding: 16px 24px;
+  border-top: 1px solid #e0e0e0;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: #fafafa;
+  border-radius: 0 0 16px 16px;
+}
+
+.report-notice {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #616161;
+  font-size: 13px;
+  max-width: 50%;
+}
+
+.report-notice i {
+  font-size: 18px;
+  color: #9e9e9e;
+}
+
+.report-actions {
+  display: flex;
+  gap: 12px;
+}
+
+.cancel-btn {
+  padding: 10px 16px;
+  border-radius: 8px;
+  background: #f0f0f0;
+  color: #424242;
+  border: none;
+  font-weight: 500;
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.cancel-btn:hover {
+  background: #e0e0e0;
+}
+
+.submit-report-btn {
+  padding: 10px 24px;
+  border-radius: 8px;
+  background: #1a237e;
+  color: white;
+  border: none;
+  font-weight: 500;
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.2s;
+  box-shadow: 0 4px 10px rgba(26, 35, 126, 0.2);
+}
+
+.submit-report-btn:hover:not(:disabled) {
+  background: #303f9f;
+  box-shadow: 0 6px 15px rgba(26, 35, 126, 0.3);
+}
+
+.submit-report-btn:disabled {
+  background: #9fa8da;
+  cursor: not-allowed;
+  box-shadow: none;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .report-categories {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  
+  .report-footer {
+    flex-direction: column;
+    gap: 16px;
+  }
+  
+  .report-notice {
+    max-width: 100%;
+  }
+  
+  .report-actions {
+    width: 100%;
+  }
+  
+  .report-actions button {
+    flex: 1;
+  }
+}
+
+@media (max-width: 480px) {
+  .report-steps {
+    display: none;
+  }
+  
+  .report-categories {
+    grid-template-columns: 1fr;
+  }
+  
+  .report-header h2 {
+    font-size: 1.2rem;
+  }
 }
 </style>
 

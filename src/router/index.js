@@ -22,6 +22,7 @@ import ManageUsers from '../components/ManageUsers.vue'
 import AdminUserReviewView from '@/views/AdminUserReviewView.vue';
 import NotificationsView from '@/views/NotificationsView.vue'; // Import the notifications view component
 import AdminAnalyticsView from '@/views/AdminAnalyticsView.vue'; // Import the admin analytics view component
+import AdminVerification from '@/views/AdminVerification.vue'; // Import the admin verification view component
 
 const routes = [
   {
@@ -97,6 +98,15 @@ const routes = [
     path: '/admin/analytics',
     name: 'AdminAnalytics',
     component: AdminAnalyticsView,
+    meta: { 
+      requiresAuth: true,
+      requiresAdmin: true
+    }
+  },
+  {
+    path: '/admin/verifications',
+    name: 'AdminVerification',
+    component: AdminVerification,
     meta: { 
       requiresAuth: true,
       requiresAdmin: true

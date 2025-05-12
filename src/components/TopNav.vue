@@ -277,6 +277,7 @@ export default {
           { name: 'Dashboard', path: '/admin-dashboard', icon: 'dashboard' },
           { name: 'Manage Users', path: '/admin/users', icon: 'people' },
           { name: 'Users Under Review', path: '/admin/reviews', icon: 'gavel' },
+          { name: 'Verifications', path: '/admin/verifications', icon: 'verified_user' },
           { name: 'Analytics', path: '/admin/analytics', icon: 'analytics' },
           { name: 'Profile', path: '/profile', icon: 'person' },
         ],

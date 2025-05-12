@@ -76,8 +76,8 @@
               <div class="services">
                 <div v-for="service in servicesArray" :key="service" class="service-tag">
                   {{ service }}
-      </div>
-      </div>
+                </div>
+              </div>
             </template>
             <template v-else>
               <textarea v-model="editForm.offers" class="edit-textarea" placeholder="List your services (comma-separated)"></textarea>
@@ -87,7 +87,7 @@
             <h3>Profession Details</h3>
             <div class="details-grid">
               <div class="detail-item">
-              <i class="material-icons">work</i>
+                <i class="material-icons">work</i>
                 <span class="label">Type:</span>
                 <template v-if="!isEditMode">
                   <span>{{ profile.typeOfProfession }}</span>
@@ -95,25 +95,25 @@
                 <template v-else>
                   <select v-model="editForm.typeOfProfession" class="edit-select">
                     <option value="">Select profession type</option>
-              <optgroup label="String Instruments">
-                <option value="Guitarist">Guitarist</option>
-                <option value="Bassist">Bassist</option>
-                <option value="Violinist">Violinist</option>
-              </optgroup>
-              <optgroup label="Percussion">
-                <option value="Drummer">Drummer</option>
-                <option value="Percussionist">Percussionist</option>
-              </optgroup>
+                    <optgroup label="String Instruments">
+                      <option value="Guitarist">Guitarist</option>
+                      <option value="Bassist">Bassist</option>
+                      <option value="Violinist">Violinist</option>
+                    </optgroup>
+                    <optgroup label="Percussion">
+                      <option value="Drummer">Drummer</option>
+                      <option value="Percussionist">Percussionist</option>
+                    </optgroup>
                     <optgroup label="Production">
                       <option value="Producer">Music Producer</option>
-                <option value="Sound Engineer">Sound Engineer</option>
-                <option value="Mixing Engineer">Mixing Engineer</option>
-              </optgroup>
+                      <option value="Sound Engineer">Sound Engineer</option>
+                      <option value="Mixing Engineer">Mixing Engineer</option>
+                    </optgroup>
                     <optgroup label="Vocals">
                       <option value="Vocalist">Vocalist</option>
                       <option value="Vocal Coach">Vocal Coach</option>
-              </optgroup>
-            </select>
+                    </optgroup>
+                  </select>
                 </template>
               </div>
               <div class="detail-item">
@@ -128,7 +128,7 @@
               </div>
             </div>
           </div>
-          </div>
+        </div>
 
         <!-- Right Column -->
         <div class="profile-section sidebar">
@@ -172,7 +172,7 @@
                       accept=".pdf,image/*"
                       class="file-input"
                     >
-            </label>
+                  </label>
                   <span v-if="editForm.portfolioFile" class="file-name">
                     {{ editForm.portfolioFile.name }}
                   </span>
@@ -181,7 +181,7 @@
                   <label class="file-label">
                     <i class="material-icons">description</i>
                     Resume (PDF/DOC)
-            <input
+                    <input
                       type="file" 
                       @change="handleResumeFile" 
                       accept=".pdf,.doc,.docx"
@@ -249,31 +249,108 @@
               <i class="material-icons">save</i>
               {{ saving ? 'Saving...' : 'Save Changes' }}
             </button>
-            <button v-else @click="handleContact" class="contact-btn">
-              <i class="material-icons">mail</i>
-              Contact Creator
+            <template v-else>
+              <button @click="handleContact" class="contact-btn">
+                <i class="material-icons">mail</i>
+                Contact Creator
+              </button>
+              <!-- Verification button for non-verified creators -->
+              <button 
+                v-if="!profile.isVerified && !profile.verificationRequested && isCurrentUserProfile" 
+                @click="openVerificationModal" 
+                class="verify-btn"
+              >
+                <i class="material-icons">verified_user</i>
+                Request Verification
+              </button>
+              <!-- Pending verification badge -->
+              <div 
+                v-if="!profile.isVerified && profile.verificationRequested && isCurrentUserProfile" 
+                class="pending-badge"
+              >
+                <i class="material-icons">hourglass_empty</i>
+                Verification Pending
+              </div>
+            </template>
+          </div>
+        </div>
+      </div>
+
+      <!-- Verification Modal -->
+      <div v-if="showVerificationModal" class="modal-overlay">
+        <div class="verification-modal">
+          <div class="modal-header">
+            <h2>Request Verification</h2>
+            <button @click="showVerificationModal = false" class="close-btn">
+              <i class="material-icons">close</i>
+            </button>
+          </div>
+          <div class="modal-body">
+            <p class="verification-info">
+              Verified creators receive a badge on their profile and are featured prominently in search results. To get verified, please submit a valid ID document.
+            </p>
+            
+            <div class="form-group">
+              <label for="verification-reason">Reason for Verification (Optional)</label>
+              <textarea 
+                id="verification-reason" 
+                v-model="verificationForm.reason" 
+                placeholder="Why should your profile be verified?"
+                class="form-control"
+              ></textarea>
+            </div>
+            
+            <div class="form-group file-upload-container">
+              <label class="file-upload-label">
+                <i class="material-icons">badge</i>
+                Upload Valid ID
+                <input 
+                  type="file" 
+                  @change="handleIdDocument" 
+                  accept="image/*"
+                  class="file-input"
+                >
+              </label>
+              <span v-if="verificationForm.idDocument" class="file-name">
+                {{ verificationForm.idDocument.name }}
+              </span>
+              <span v-else class="help-text">Valid government-issued ID required (e.g., Driver's License, Passport)</span>
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button 
+              @click="submitVerification" 
+              class="submit-btn" 
+              :disabled="!verificationForm.idDocument || submitting"
+            >
+              <i class="material-icons">send</i>
+              {{ submitting ? 'Submitting...' : 'Submit Request' }}
             </button>
           </div>
         </div>
-        </div>
+      </div>
     </div>
   </div>
 </template>
 
 <script>
 import { ref, computed, onMounted, reactive } from 'vue';
-import { getCreatorProfile } from '../authService';
+import { getCreatorProfile, applyForVerification } from '../authService';
 import { MEDIA_BASE_URL } from '../authService';
 import Swal from 'sweetalert2';
+import { useRoute } from 'vue-router';
 
 export default {
   name: 'CreatorProfile',
   setup() {
+    const route = useRoute();
     const profile = ref(null);
     const loading = ref(true);
     const error = ref(null);
     const isEditMode = ref(false);
     const saving = ref(false);
+    const showVerificationModal = ref(false);
+    const submitting = ref(false);
 
     // Edit form state
     const editForm = reactive({
@@ -285,7 +362,13 @@ export default {
       portfolioFile: null,
       resumeFile: null,
       socialLinks: [{ platform: '', url: '' }]
-});
+    });
+    
+    // Verification form state
+    const verificationForm = reactive({
+      reason: '',
+      idDocument: null
+    });
 
     const socialPlatforms = [
       'Facebook',
@@ -300,19 +383,28 @@ export default {
       'Amazon Music'
     ];
 
-const fetchProfile = async () => {
-  try {
-    loading.value = true;
+    const fetchProfile = async () => {
+      try {
+        loading.value = true;
         error.value = null;
-        const response = await getCreatorProfile();
-        profile.value = response.creatorProfile;
+        
+        // If viewing another creator's profile
+        if (route.params.creatorId) {
+          // Implementation needed to get other creator profile
+          profile.value = {}; // Placeholder
+        } else {
+          // Get current user's profile
+          const response = await getCreatorProfile();
+          profile.value = response.creatorProfile;
+        }
+        
         initializeEditForm();
       } catch (err) {
         error.value = err.message || 'Failed to load profile';
-  } finally {
-    loading.value = false;
-  }
-};
+      } finally {
+        loading.value = false;
+      }
+    };
 
     const initializeEditForm = () => {
       if (!profile.value) return;
@@ -415,7 +507,7 @@ const fetchProfile = async () => {
         }
         if (editForm.resumeFile) {
           formData.append('resumeFile', editForm.resumeFile);
-    }
+        }
 
         // Only include valid social links
         if (validSocialLinks.length) {
@@ -439,22 +531,22 @@ const fetchProfile = async () => {
         isEditMode.value = false;
         
         Swal.fire({
-      icon: 'success',
+          icon: 'success',
           title: 'Profile Updated',
           text: 'Your creator profile has been updated successfully',
           showConfirmButton: false,
           timer: 2000
-    });
-  } catch (error) {
-    Swal.fire({
-      icon: 'error',
-      title: 'Update Failed',
-      text: error.message || 'Failed to update profile'
-    });
-  } finally {
+        });
+      } catch (error) {
+        Swal.fire({
+          icon: 'error',
+          title: 'Update Failed',
+          text: error.message || 'Failed to update profile'
+        });
+      } finally {
         saving.value = false;
-  }
-};
+      }
+    };
 
     const getInitials = (firstName, lastName) => {
       return `${firstName?.[0] || ''}${lastName?.[0] || ''}`.toUpperCase();
@@ -506,6 +598,71 @@ const fetchProfile = async () => {
       ((profile.value?.creatorLevel || 0) / 5) * 100
     );
 
+    const isCurrentUserProfile = computed(() => {
+      // Check if we're not viewing another creator's profile
+      return !route.params.creatorId;
+    });
+
+    const openVerificationModal = () => {
+      showVerificationModal.value = true;
+    };
+    
+    const handleIdDocument = (event) => {
+      const file = event.target.files[0];
+      if (file) {
+        if (file.size > 5 * 1024 * 1024) { // 5MB limit
+          Swal.fire({
+            icon: 'error',
+            title: 'File too large',
+            text: 'ID document must be less than 5MB'
+          });
+          return;
+        }
+        verificationForm.idDocument = file;
+      }
+    };
+    
+    const submitVerification = async () => {
+      if (!verificationForm.idDocument) {
+        Swal.fire({
+          icon: 'error',
+          title: 'Missing Document',
+          text: 'Please upload a valid ID document'
+        });
+        return;
+      }
+      
+      try {
+        submitting.value = true;
+        
+        await applyForVerification(
+          verificationForm.reason,
+          verificationForm.idDocument
+        );
+        
+        showVerificationModal.value = false;
+        
+        // Refresh profile to show pending status
+        await fetchProfile();
+        
+        Swal.fire({
+          icon: 'success',
+          title: 'Request Submitted',
+          text: 'Your verification request has been submitted and is pending review',
+          showConfirmButton: false,
+          timer: 2000
+        });
+      } catch (error) {
+        Swal.fire({
+          icon: 'error',
+          title: 'Submission Failed',
+          text: error.message || 'Failed to submit verification request'
+        });
+      } finally {
+        submitting.value = false;
+      }
+    };
+
     onMounted(fetchProfile);
 
     return {
@@ -516,6 +673,9 @@ const fetchProfile = async () => {
       saving,
       editForm,
       socialPlatforms,
+      showVerificationModal,
+      verificationForm,
+      submitting,
       getInitials,
       getFileUrl,
       getSocialIcon,
@@ -530,7 +690,11 @@ const fetchProfile = async () => {
       handleResumeFile,
       addSocialLink,
       removeSocialLink,
-      handleSave
+      handleSave,
+      isCurrentUserProfile,
+      openVerificationModal,
+      handleIdDocument,
+      submitVerification
     };
   }
 };
@@ -898,6 +1062,192 @@ const fetchProfile = async () => {
 
 .contact-btn:hover {
   background: #388e3c;
+}
+
+.verify-btn {
+  background: #4caf50;
+  color: white;
+  margin-left: 1rem;
+}
+
+.verify-btn:hover {
+  background: #388e3c;
+}
+
+.pending-badge {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: #ffd740;
+  color: #333;
+  padding: 0.5rem 1rem;
+  border-radius: 20px;
+  font-size: 0.9rem;
+  margin-left: 1rem;
+}
+
+/* Verification Modal Styles */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+}
+
+.verification-modal {
+  background: white;
+  width: 100%;
+  max-width: 500px;
+  border-radius: 12px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+  display: flex;
+  flex-direction: column;
+}
+
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1.5rem;
+  border-bottom: 1px solid #eee;
+}
+
+.modal-header h2 {
+  margin: 0;
+  font-size: 1.5rem;
+  color: #333;
+}
+
+.close-btn {
+  background: none;
+  border: none;
+  color: #666;
+  cursor: pointer;
+  padding: 0.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  transition: background 0.3s;
+}
+
+.close-btn:hover {
+  background: #f0f0f0;
+}
+
+.modal-body {
+  padding: 1.5rem;
+  max-height: 70vh;
+  overflow-y: auto;
+}
+
+.verification-info {
+  margin-top: 0;
+  margin-bottom: 1.5rem;
+  color: #666;
+  line-height: 1.5;
+}
+
+.form-group {
+  margin-bottom: 1.5rem;
+}
+
+.form-group label {
+  display: block;
+  margin-bottom: 0.5rem;
+  font-weight: 500;
+}
+
+.form-control {
+  width: 100%;
+  padding: 0.75rem;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  font-size: 1rem;
+  transition: all 0.3s;
+}
+
+.form-control:focus {
+  border-color: #2196f3;
+  box-shadow: 0 0 0 3px rgba(33, 150, 243, 0.1);
+  outline: none;
+}
+
+textarea.form-control {
+  min-height: 100px;
+  resize: vertical;
+}
+
+.file-upload-container {
+  display: flex;
+  flex-direction: column;
+}
+
+.file-upload-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1.5rem;
+  background: #f5f5f5;
+  color: #333;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.3s;
+  margin-bottom: 0.5rem;
+  font-weight: normal;
+  max-width: fit-content;
+}
+
+.file-upload-label:hover {
+  background: #e0e0e0;
+}
+
+.file-name {
+  margin-top: 0.5rem;
+  font-size: 0.9rem;
+  color: #666;
+}
+
+.help-text {
+  font-size: 0.85rem;
+  color: #666;
+}
+
+.modal-footer {
+  padding: 1rem 1.5rem;
+  border-top: 1px solid #eee;
+  display: flex;
+  justify-content: flex-end;
+}
+
+.submit-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1.5rem;
+  background: #2196f3;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: all 0.3s;
+}
+
+.submit-btn:hover:not(:disabled) {
+  background: #1976d2;
+}
+
+.submit-btn:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
 }
 
 @media (max-width: 768px) {

@@ -376,6 +376,10 @@
               <i class="material-icons">chat</i>
               Send Message
             </button>
+            <button @click="openReportModal" class="report-btn">
+              <i class="material-icons">flag</i>
+              Report Post
+            </button>
           </div>
     </div>
 
@@ -661,6 +665,68 @@
         </div>
       </div>
     </div>
+
+    <!-- Report Modal -->
+    <div v-if="showReportModal" class="modal-overlay" @click="closeReportModal">
+      <div class="modal-content report-modal" @click.stop>
+        <div class="modal-header">
+          <h2>Report Post</h2>
+          <button class="close-btn" @click="closeReportModal">
+            <i class="material-icons">close</i>
+          </button>
+        </div>
+        <div class="modal-body">
+          <div class="form-group">
+            <label>Category</label>
+            <select v-model="reportData.category" class="report-select">
+              <option value="harassment">Harassment</option>
+              <option value="inappropriate">Inappropriate Content</option>
+              <option value="spam">Spam</option>
+              <option value="scam">Scam</option>
+              <option value="copyright">Copyright Violation</option>
+              <option value="other">Other</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Reason</label>
+            <input 
+              v-model="reportData.reason" 
+              type="text" 
+              placeholder="Brief reason for reporting"
+              class="report-input"
+            />
+          </div>
+          <div class="form-group">
+            <label>Details</label>
+            <textarea 
+              v-model="reportData.details" 
+              placeholder="Provide more details about the issue..."
+              class="report-textarea"
+              rows="4"
+            ></textarea>
+          </div>
+          <div class="form-group">
+            <label>Evidence (Optional)</label>
+            <input 
+              type="file" 
+              @change="handleEvidenceUpload" 
+              accept="image/*"
+              class="report-file-input"
+            />
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="cancel-btn" @click="closeReportModal">Cancel</button>
+          <button 
+            class="submit-report-btn" 
+            @click="submitReport"
+            :disabled="!reportData.category || !reportData.reason"
+          >
+            Submit Report
+          </button>
+        </div>
+      </div>
+    </div>
   </div>
 
   <div v-else class="loading-container">
@@ -677,7 +743,8 @@ import {
   fetchCreatorRatingsById,
   trackPostView,
   trackAudioPlay,
-  trackClickThrough
+  trackClickThrough,
+  reportUser
 } from '../authService.js';
 import Swal from 'sweetalert2';
 
@@ -703,7 +770,14 @@ export default {
       duration: 0,
       isMuted: false,
       volume: 0.5,
-      showEngagementStats: false
+      showEngagementStats: false,
+      showReportModal: false,
+      reportData: {
+        category: '',
+        reason: '',
+        details: '',
+        evidenceImage: null
+      }
     };
   },
   computed: {
@@ -1010,6 +1084,81 @@ export default {
       // Update progress visually
       this.audioProgress = clickPositionRatio;
       this.currentTime = this.$refs.audioElement.currentTime;
+    },
+    openReportModal() {
+      if (!localStorage.getItem('token')) {
+        Swal.fire({
+          title: 'Login Required',
+          text: 'You need to be logged in to report content',
+          icon: 'info',
+          showCancelButton: true,
+          confirmButtonText: 'Login',
+          cancelButtonText: 'Cancel'
+        }).then((result) => {
+          if (result.isConfirmed) {
+            this.$router.push('/login');
+          }
+        });
+        return;
+      }
+      this.showReportModal = true;
+    },
+    
+    closeReportModal() {
+      this.showReportModal = false;
+      this.reportData = {
+        category: '',
+        reason: '',
+        details: '',
+        evidenceImage: null
+      };
+    },
+    
+    handleEvidenceUpload(event) {
+      const file = event.target.files[0];
+      if (file) {
+        if (file.size > 10 * 1024 * 1024) { // 10MB limit
+          Swal.fire({
+            icon: 'error',
+            title: 'File too large',
+            text: 'Evidence image must be less than 10MB'
+          });
+          event.target.value = '';
+          return;
+        }
+        this.reportData.evidenceImage = file;
+      }
+    },
+    
+    async submitReport() {
+      try {
+        if (!this.post || !this.post.user || !this.post.user.id) {
+          throw new Error('Cannot report this post');
+        }
+        
+        await reportUser({
+          reportedUserId: this.post.user.id,
+          ...this.reportData,
+          details: `Post ID ${this.post.id}: ${this.reportData.details}` // Include post reference in details
+        }, this.reportData.evidenceImage);
+        
+        this.closeReportModal();
+        
+        Swal.fire({
+          icon: 'success',
+          title: 'Report Submitted',
+          text: 'Thank you for your report. Our team will review it shortly.',
+          timer: 3000,
+          showConfirmButton: false
+        });
+      } catch (error) {
+        console.error('Error submitting report:', error);
+        Swal.fire({
+          icon: 'error',
+          title: 'Error',
+          text: error.message || 'Failed to submit report'
+        });
+      }
     }
   }
 };
@@ -1322,7 +1471,8 @@ export default {
 }
 
 .profile-btn,
-.message-btn {
+.message-btn,
+.report-btn {
   flex: 1;
   display: flex;
   align-items: center;
@@ -1346,12 +1496,21 @@ export default {
   color: white;
 }
 
+.report-btn {
+  background: #dc3545;
+  color: white;
+}
+
 .profile-btn:hover {
   background: #5e35b1;
 }
 
 .message-btn:hover {
   background: #1976d2;
+}
+
+.report-btn:hover {
+  background: #c82333;
 }
 
 .post-metadata {
@@ -2493,6 +2652,83 @@ export default {
   .modal-footer button {
     width: 100%;
   }
+}
+
+/* Report Modal Styles */
+.report-modal {
+  max-width: 600px;
+}
+
+.report-select,
+.report-input,
+.report-textarea {
+  width: 100%;
+  padding: 10px;
+  border: 1px solid #e0e6ff;
+  border-radius: 8px;
+  font-size: 14px;
+  margin-top: 5px;
+}
+
+.report-textarea {
+  resize: vertical;
+}
+
+.report-file-input {
+  margin-top: 5px;
+}
+
+.report-btn {
+  background: #dc3545;
+  color: white;
+  padding: 10px 20px;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.submit-report-btn {
+  background: #dc3545;
+  color: white;
+  padding: 10px 20px;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.submit-report-btn:disabled {
+  background: #dc354580;
+  cursor: not-allowed;
+}
+
+.submit-report-btn:hover:not(:disabled) {
+  background: #c82333;
+}
+
+.report-btn {
+  background: #dc3545;
+  color: white;
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.75rem;
+  border: none;
+  border-radius: 8px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.report-btn:hover {
+  background: #c82333;
 }
 </style>
   

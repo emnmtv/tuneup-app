@@ -18,6 +18,12 @@ export const getUserIdFromToken = () => {
   }
 };
 
+// Add this function to check if user is an admin
+export const isUserAdmin = () => {
+  const role = localStorage.getItem('userRole');
+  return role === 'admin';
+};
+
 export const loginUser = async (email, password) => {
   try {
     const response = await fetch(`${BASE_URL}/login`, {
@@ -47,7 +53,6 @@ export const loginUser = async (email, password) => {
     throw error;
   }
 };
-
 
 export async function getProfile() {
   const token = localStorage.getItem("token");
@@ -1525,8 +1530,8 @@ export const fetchUsersWithRestrictions = async () => {
 
 // ==================== ADMIN ANALYTICS FUNCTIONS ====================
 
-// Get app overview (earnings, users, transactions, etc)
-export const fetchAdminOverview = async () => {
+// Get admin revenue analytics
+export const getAdminRevenueAnalytics = async (startDate, endDate, groupBy = 'day', includeTransactions = false) => {
   const token = localStorage.getItem('token');
   
   if (!token) {
@@ -1534,115 +1539,16 @@ export const fetchAdminOverview = async () => {
   }
 
   try {
-    const response = await fetch(`${BASE_URL}/admin/analytics/overview`, {
-      method: 'GET',
-      headers: {
-        'Authorization': `Bearer ${token}`,
-        'Content-Type': 'application/json'
-      }
-    });
-
-    if (!response.ok) {
-      const errorData = await response.json();
-      throw new Error(errorData.error || 'Failed to fetch admin overview');
-    }
-
-    return await response.json();
-  } catch (error) {
-    console.error('Failed to fetch admin overview:', error);
-    throw new Error(`Failed to fetch admin overview: ${error.message}`);
-  }
-};
-
-// Get transaction details with pagination
-export const fetchAdminTransactions = async (page = 1, limit = 20) => {
-  const token = localStorage.getItem('token');
-  
-  if (!token) {
-    throw new Error('No authentication token found');
-  }
-
-  try {
-    const response = await fetch(`${BASE_URL}/admin/analytics/transactions?page=${page}&limit=${limit}`, {
-      method: 'GET',
-      headers: {
-        'Authorization': `Bearer ${token}`,
-        'Content-Type': 'application/json'
-      }
-    });
-
-    if (!response.ok) {
-      const errorData = await response.json();
-      throw new Error(errorData.error || 'Failed to fetch transactions');
-    }
-
-    return await response.json();
-  } catch (error) {
-    console.error('Failed to fetch transactions:', error);
-    throw new Error(`Failed to fetch transactions: ${error.message}`);
-  }
-};
-
-// Claim admin fees for specific transactions
-export const claimAdminFees = async (transactionIds) => {
-  const token = localStorage.getItem('token');
-  
-  if (!token) {
-    throw new Error('No authentication token found');
-  }
-
-  // Ensure transactionIds is an array
-  const ids = Array.isArray(transactionIds) ? transactionIds : [transactionIds];
-
-  try {
-    const response = await fetch(`${BASE_URL}/admin/analytics/claim-fees`, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${token}`,
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({ transactionIds: ids })
-    });
-
-    if (!response.ok) {
-      // If endpoint not found or other server error
-      console.warn('Admin fee claim endpoint error, simulating success');
-      
-      // Return simulated success response
-      return {
-        message: `Successfully claimed admin fees for ${ids.length} transactions (simulated)`,
-        totalClaimed: `₱${(ids.length * 200).toFixed(2)}`,
-        rawTotalClaimed: ids.length * 20000, // Simulated 200 pesos in cents per transaction
-        claimedTransactions: ids.length
-      };
-    }
-
-    return await response.json();
-  } catch (error) {
-    console.error('Failed to claim admin fees:', error);
+    // Build query parameters
+    const params = new URLSearchParams();
+    if (startDate) params.append('startDate', startDate);
+    if (endDate) params.append('endDate', endDate);
+    if (groupBy) params.append('groupBy', groupBy);
+    if (includeTransactions) params.append('includeTransactions', 'true');
     
-    // For development, return success to allow testing
-    console.warn('Simulating successful fee claim for development');
-    return {
-      message: `Successfully claimed admin fees for ${ids.length} transactions (simulated)`,
-      totalClaimed: `₱${(ids.length * 200).toFixed(2)}`,
-      rawTotalClaimed: ids.length * 20000, // Simulated 200 pesos in cents per transaction
-      claimedTransactions: ids.length
-    };
-  }
-};
-
-// Generate daily analytics
-export const generateDailyAnalytics = async (date) => {
-  const token = localStorage.getItem('token');
-  
-  if (!token) {
-    throw new Error('No authentication token found');
-  }
-
-  try {
-    const dateParam = date ? `?date=${date}` : '';
-    const response = await fetch(`${BASE_URL}/admin/analytics/daily${dateParam}`, {
+    const queryString = params.toString() ? `?${params.toString()}` : '';
+    
+    const response = await fetch(`${BASE_URL}/admin/analytics/revenue${queryString}`, {
       method: 'GET',
       headers: {
         'Authorization': `Bearer ${token}`,
@@ -1652,18 +1558,18 @@ export const generateDailyAnalytics = async (date) => {
 
     if (!response.ok) {
       const errorData = await response.json();
-      throw new Error(errorData.error || 'Failed to generate daily analytics');
+      throw new Error(errorData.error || 'Failed to fetch revenue analytics');
     }
 
     return await response.json();
   } catch (error) {
-    console.error('Failed to generate daily analytics:', error);
-    throw new Error(`Failed to generate daily analytics: ${error.message}`);
+    console.error('Error fetching revenue analytics:', error);
+    throw new Error(error.message || 'Failed to fetch revenue analytics');
   }
 };
 
-// Get analytics for a date range
-export const fetchAnalyticsRange = async (startDate, endDate) => {
+// Get admin user growth analytics
+export const getAdminUserGrowthAnalytics = async (startDate, endDate, groupBy = 'day') => {
   const token = localStorage.getItem('token');
   
   if (!token) {
@@ -1671,37 +1577,36 @@ export const fetchAnalyticsRange = async (startDate, endDate) => {
   }
 
   try {
-    // Format dates for API call if they're Date objects
-    const formattedStart = startDate instanceof Date ? 
-      startDate.toISOString().split('T')[0] : startDate;
-    const formattedEnd = endDate instanceof Date ? 
-      endDate.toISOString().split('T')[0] : endDate;
-
-    const response = await fetch(
-      `${BASE_URL}/admin/analytics/range?startDate=${formattedStart}&endDate=${formattedEnd}`, 
-      {
-        method: 'GET',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
+    // Build query parameters
+    const params = new URLSearchParams();
+    if (startDate) params.append('startDate', startDate);
+    if (endDate) params.append('endDate', endDate);
+    if (groupBy) params.append('groupBy', groupBy);
+    
+    const queryString = params.toString() ? `?${params.toString()}` : '';
+    
+    const response = await fetch(`${BASE_URL}/admin/analytics/users${queryString}`, {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
       }
-    );
+    });
 
     if (!response.ok) {
       const errorData = await response.json();
-      throw new Error(errorData.error || 'Failed to fetch analytics range');
+      throw new Error(errorData.error || 'Failed to fetch user growth analytics');
     }
 
     return await response.json();
   } catch (error) {
-    console.error('Failed to fetch analytics range:', error);
-    throw new Error(`Failed to fetch analytics range: ${error.message}`);
+    console.error('Error fetching user growth analytics:', error);
+    throw new Error(error.message || 'Failed to fetch user growth analytics');
   }
 };
 
-// Update admin fee percentage
-export const updateAdminFee = async (feePercentage) => {
+// Get admin creator performance analytics
+export const getAdminCreatorPerformance = async () => {
   const token = localStorage.getItem('token');
   
   if (!token) {
@@ -1709,7 +1614,98 @@ export const updateAdminFee = async (feePercentage) => {
   }
 
   try {
-    // Update to use a more appropriate endpoint for global fee setting
+    const response = await fetch(`${BASE_URL}/admin/analytics/creators`, {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      }
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.error || 'Failed to fetch creator performance data');
+    }
+
+    return await response.json();
+  } catch (error) {
+    console.error('Error fetching creator performance:', error);
+    throw new Error(error.message || 'Failed to fetch creator performance data');
+  }
+};
+
+// Get admin content performance analytics
+export const getAdminContentPerformance = async () => {
+  const token = localStorage.getItem('token');
+  
+  if (!token) {
+    throw new Error('No authentication token found');
+  }
+
+  try {
+    const response = await fetch(`${BASE_URL}/admin/analytics/content`, {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      }
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.error || 'Failed to fetch content performance data');
+    }
+
+    return await response.json();
+  } catch (error) {
+    console.error('Error fetching content performance:', error);
+    throw new Error(error.message || 'Failed to fetch content performance data');
+  }
+};
+
+// Get current fee percentage
+export const getCurrentFeePercentage = async () => {
+  const token = localStorage.getItem('token');
+  
+  if (!token) {
+    throw new Error('No authentication token found');
+  }
+
+  try {
+    const response = await fetch(`${BASE_URL}/admin/settings/fee`, {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      }
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.error || 'Failed to fetch fee percentage');
+    }
+
+    return await response.json();
+  } catch (error) {
+    console.error('Error fetching fee percentage:', error);
+    throw new Error(error.message || 'Failed to fetch fee percentage');
+  }
+};
+
+// Update fee percentage
+export const updateFeePercentage = async (feePercentage) => {
+  const token = localStorage.getItem('token');
+  
+  if (!token) {
+    throw new Error('No authentication token found');
+  }
+
+  try {
+    // Validate fee percentage
+    if (typeof feePercentage !== 'number' || feePercentage < 0 || feePercentage > 50) {
+      throw new Error('Fee percentage must be a number between 0 and 50');
+    }
+
     const response = await fetch(`${BASE_URL}/admin/settings/fee`, {
       method: 'PUT',
       headers: {
@@ -1720,33 +1716,19 @@ export const updateAdminFee = async (feePercentage) => {
     });
 
     if (!response.ok) {
-      // For now, just simulate success since the endpoint likely doesn't exist yet
-      console.warn('Admin fee endpoint not implemented yet, simulating success');
-      
-      // Return simulated success response
-      return {
-        success: true,
-        message: 'Admin fee updated successfully',
-        feePercentage: feePercentage
-      };
+      const errorData = await response.json();
+      throw new Error(errorData.error || 'Failed to update fee percentage');
     }
 
     return await response.json();
   } catch (error) {
-    console.error('Failed to update admin fee:', error);
-    
-    // For development, return success to allow testing
-    console.warn('Simulating successful fee update for development');
-    return {
-      success: true,
-      message: 'Admin fee updated successfully (simulated)',
-      feePercentage: feePercentage
-    };
+    console.error('Error updating fee percentage:', error);
+    throw new Error(error.message || 'Failed to update fee percentage');
   }
 };
 
-// Run scheduled analytics job
-export const runScheduledAnalytics = async () => {
+// Claim admin fees
+export const claimAdminFees = async (paymentIds = null) => {
   const token = localStorage.getItem('token');
   
   if (!token) {
@@ -1754,23 +1736,36 @@ export const runScheduledAnalytics = async () => {
   }
 
   try {
-    const response = await fetch(`${BASE_URL}/admin/analytics/schedule`, {
+    // Handle single ID or array of IDs
+    let requestBody = {};
+    
+    if (paymentIds) {
+      // If it's a single ID, convert to array
+      if (!Array.isArray(paymentIds)) {
+        requestBody = { paymentIds: [paymentIds] };
+      } else {
+        requestBody = { paymentIds };
+      }
+    }
+    
+    const response = await fetch(`${BASE_URL}/admin/claim-fees`, {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${token}`,
         'Content-Type': 'application/json'
-      }
+      },
+      body: JSON.stringify(requestBody)
     });
 
     if (!response.ok) {
       const errorData = await response.json();
-      throw new Error(errorData.error || 'Failed to run scheduled analytics');
+      throw new Error(errorData.error || 'Failed to claim fees');
     }
 
     return await response.json();
   } catch (error) {
-    console.error('Failed to run scheduled analytics:', error);
-    throw new Error(`Failed to run scheduled analytics: ${error.message}`);
+    console.error('Error claiming fees:', error);
+    throw new Error(error.message || 'Failed to claim fees');
   }
 };
 
@@ -1815,4 +1810,304 @@ export async function resetPassword(email, resetCode, newPassword) {
     throw error;
   }
 }
+
+// ==================== USER REPORTING FUNCTIONS ====================
+
+// Submit a report about a user
+export const reportUser = async (reportData, evidenceImage = null) => {
+  const token = localStorage.getItem('token');
+  
+  if (!token) {
+    throw new Error('Authentication required to report a user');
+  }
+
+  try {
+    // Create form data to handle the file upload
+    const formData = new FormData();
+    formData.append('reportedUserId', reportData.reportedUserId);
+    formData.append('reason', reportData.reason);
+    formData.append('category', reportData.category);
+    
+    if (reportData.details) {
+      formData.append('details', reportData.details);
+    }
+    
+    // Add image if provided
+    if (evidenceImage instanceof File) {
+      formData.append('evidenceImage', evidenceImage);
+    }
+
+    const response = await fetch(`${BASE_URL}/report-user`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${token}`
+      },
+      body: formData
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.error || 'Failed to submit report');
+    }
+
+    return await response.json();
+  } catch (error) {
+    console.error('Error reporting user:', error);
+    throw new Error(error.message || 'Failed to submit report');
+  }
+};
+
+// Get all reports (admin only)
+export const getReports = async (status = null, page = 1, limit = 20) => {
+  const token = localStorage.getItem('token');
+  
+  if (!token) {
+    throw new Error('Authentication required');
+  }
+
+  try {
+    let url = `${BASE_URL}/admin/reports?page=${page}&limit=${limit}`;
+    if (status) {
+      url += `&status=${status}`;
+    }
+
+    const response = await fetch(url, {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      }
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.error || 'Failed to fetch reports');
+    }
+
+    return await response.json();
+  } catch (error) {
+    console.error('Error fetching reports:', error);
+    throw new Error(error.message || 'Failed to fetch reports');
+  }
+};
+
+// Get detailed report information (admin only)
+export const getReportDetails = async (reportId) => {
+  const token = localStorage.getItem('token');
+  
+  if (!token) {
+    throw new Error('Authentication required');
+  }
+
+  try {
+    const response = await fetch(`${BASE_URL}/admin/reports/${reportId}`, {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      }
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.error || 'Failed to fetch report details');
+    }
+
+    return await response.json();
+  } catch (error) {
+    console.error('Error fetching report details:', error);
+    throw new Error(error.message || 'Failed to fetch report details');
+  }
+};
+
+// Update report status and take action (admin only)
+export const updateReportStatus = async (reportId, updateData) => {
+  const token = localStorage.getItem('token');
+  
+  if (!token) {
+    throw new Error('Authentication required');
+  }
+
+  try {
+    const response = await fetch(`${BASE_URL}/admin/reports/${reportId}`, {
+      method: 'PUT',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(updateData)
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.error || 'Failed to update report');
+    }
+
+    return await response.json();
+  } catch (error) {
+    console.error('Error updating report:', error);
+    throw new Error(error.message || 'Failed to update report');
+  }
+};
+
+// Delete a report (admin only)
+export const deleteReport = async (reportId) => {
+  const token = localStorage.getItem('token');
+  
+  if (!token) {
+    throw new Error('Authentication required');
+  }
+
+  try {
+    const response = await fetch(`${BASE_URL}/admin/reports/${reportId}`, {
+      method: 'DELETE',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      }
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.error || 'Failed to delete report');
+    }
+
+    return await response.json();
+  } catch (error) {
+    console.error('Error deleting report:', error);
+    throw new Error(error.message || 'Failed to delete report');
+  }
+};
+
+// ==================== CREATOR VERIFICATION FUNCTIONS ====================
+
+// Apply for creator verification
+export const applyForVerification = async (reason, validIdFile) => {
+  const token = localStorage.getItem('token');
+  
+  if (!token) {
+    throw new Error('Authentication required to apply for verification');
+  }
+
+  try {
+    // Create form data to handle the file upload
+    const formData = new FormData();
+    
+    if (reason) {
+      formData.append('reason', reason);
+    }
+    
+    // Add valid ID file
+    if (validIdFile instanceof File) {
+      formData.append('validId', validIdFile);
+    } else {
+      throw new Error('Valid ID document is required');
+    }
+
+    const response = await fetch(`${BASE_URL}/verification/apply`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${token}`
+      },
+      body: formData
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.error || 'Failed to submit verification request');
+    }
+
+    return await response.json();
+  } catch (error) {
+    console.error('Error applying for verification:', error);
+    throw new Error(error.message || 'Failed to submit verification request');
+  }
+};
+
+// Get pending verification requests (admin only)
+export const getPendingVerificationRequests = async () => {
+  const token = localStorage.getItem('token');
+  
+  if (!token) {
+    throw new Error('Authentication required');
+  }
+
+  try {
+    const response = await fetch(`${BASE_URL}/admin/verifications`, {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      }
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.error || 'Failed to fetch verification requests');
+    }
+
+    const data = await response.json();
+    
+    // Add media URLs for profile pictures and ID documents
+    const requestsWithUrls = {
+      ...data,
+      pendingRequests: data.pendingRequests.map(request => ({
+        ...request,
+        user: {
+          ...request.user,
+          profilePicture: request.user.profilePicture ? `${MEDIA_BASE_URL}${request.user.profilePicture}` : null
+        },
+        validIdDocument: request.validIdDocument ? `${MEDIA_BASE_URL}/uploads/verification/${request.validIdDocument}` : null
+      }))
+    };
+    
+    return requestsWithUrls;
+  } catch (error) {
+    console.error('Error fetching verification requests:', error);
+    throw new Error(error.message || 'Failed to fetch verification requests');
+  }
+};
+
+// Review verification request (admin only)
+export const reviewVerificationRequest = async (creatorProfileId, approve, rejectionReason = null) => {
+  const token = localStorage.getItem('token');
+  
+  if (!token) {
+    throw new Error('Authentication required');
+  }
+
+  // Validate inputs
+  if (typeof approve !== 'boolean') {
+    throw new Error('Approve parameter must be a boolean');
+  }
+  
+  if (!approve && !rejectionReason) {
+    throw new Error('Rejection reason is required when rejecting a verification request');
+  }
+
+  try {
+    const response = await fetch(`${BASE_URL}/admin/verifications/review`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        creatorProfileId,
+        approve,
+        rejectionReason: !approve ? rejectionReason : undefined
+      })
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.error || 'Failed to process verification request');
+    }
+
+    return await response.json();
+  } catch (error) {
+    console.error('Error reviewing verification request:', error);
+    throw new Error(error.message || 'Failed to process verification request');
+  }
+};
 
