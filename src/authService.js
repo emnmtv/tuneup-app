@@ -1547,8 +1547,11 @@ export const getAdminRevenueAnalytics = async (startDate, endDate, groupBy = 'da
     if (includeTransactions) params.append('includeTransactions', 'true');
     
     const queryString = params.toString() ? `?${params.toString()}` : '';
+    const endpoint = `${BASE_URL}/admin/analytics/revenue${queryString}`;
     
-    const response = await fetch(`${BASE_URL}/admin/analytics/revenue${queryString}`, {
+    console.log('Fetching admin revenue analytics:', endpoint);
+    
+    const response = await fetch(endpoint, {
       method: 'GET',
       headers: {
         'Authorization': `Bearer ${token}`,
@@ -1558,10 +1561,24 @@ export const getAdminRevenueAnalytics = async (startDate, endDate, groupBy = 'da
 
     if (!response.ok) {
       const errorData = await response.json();
+      console.error('Revenue analytics error response:', errorData);
       throw new Error(errorData.error || 'Failed to fetch revenue analytics');
     }
 
-    return await response.json();
+    const data = await response.json();
+    console.log('Admin revenue analytics raw response:', data);
+    
+    // Handle different response formats between environments
+    // Ensure we always return consistent data structure
+    return {
+      totalTransactions: data.totalTransactions || 0,
+      totalRevenue: typeof data.totalRevenue === 'number' ? data.totalRevenue : 0,
+      claimedRevenue: typeof data.claimedRevenue === 'number' ? data.claimedRevenue : 0,
+      unclaimedRevenue: typeof data.unclaimedRevenue === 'number' ? data.unclaimedRevenue : 0,
+      revenueTimeline: Array.isArray(data.revenueTimeline) ? data.revenueTimeline : [],
+      transactions: Array.isArray(data.transactions) ? data.transactions : [],
+      currency: data.currency || 'USD'
+    };
   } catch (error) {
     console.error('Error fetching revenue analytics:', error);
     throw new Error(error.message || 'Failed to fetch revenue analytics');
@@ -1766,6 +1783,35 @@ export const claimAdminFees = async (paymentIds = null) => {
   } catch (error) {
     console.error('Error claiming fees:', error);
     throw new Error(error.message || 'Failed to claim fees');
+  }
+};
+
+// Fix admin fees for existing payments
+export const fixAdminFees = async () => {
+  const token = localStorage.getItem('token');
+  
+  if (!token) {
+    throw new Error('No authentication token found');
+  }
+
+  try {
+    const response = await fetch(`${BASE_URL}/admin/fix-admin-fees`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      }
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.error || 'Failed to fix admin fees');
+    }
+
+    return await response.json();
+  } catch (error) {
+    console.error('Error fixing admin fees:', error);
+    throw new Error(error.message || 'Failed to fix admin fees');
   }
 };
 

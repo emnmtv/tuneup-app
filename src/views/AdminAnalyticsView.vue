@@ -39,11 +39,11 @@
           <div class="summary-cards">
             <div class="summary-card">
               <h3>Total Revenue</h3>
-              <p class="amount">${{ revenue.totalRevenue?.toFixed(2) || '0.00' }}</p>
+              <p class="amount">₱{{ revenue.totalRevenue?.toFixed(2) || '0.00' }}</p>
             </div>
             <div class="summary-card">
               <h3>Unclaimed Fees</h3>
-              <p class="amount">${{ revenue.unclaimedRevenue?.toFixed(2) || '0.00' }}</p>
+              <p class="amount">₱{{ revenue.unclaimedRevenue?.toFixed(2) || '0.00' }}</p>
             </div>
             <div class="summary-card">
               <h3>Transactions</h3>
@@ -99,8 +99,8 @@
                     <td>{{ formatDate(transaction.createdAt) }}</td>
                     <td>{{ transaction.creatorName }}</td>
                     <td>{{ transaction.clientName }}</td>
-                    <td>${{ (transaction.amount / 100).toFixed(2) }}</td>
-                    <td>${{ (transaction.adminFee / 100).toFixed(2) }}</td>
+                    <td>₱{{ (transaction.amount / 100).toFixed(2) }}</td>
+                    <td>₱{{ (transaction.adminFee / 100).toFixed(2) }}</td>
                     <td>
                       <span 
                         :class="['status-badge', 
@@ -192,14 +192,14 @@
                   <tr>
                     <th>Creator</th>
                     <th>Profession</th>
-                    <th>Earnings ($)</th>
+                    <th>Earnings (₱)</th>
                   </tr>
                 </thead>
                 <tbody>
                   <tr v-for="(creator, index) in creatorPerformance.topEarners" :key="'earner-'+index">
                     <td>{{ creator.name }}</td>
                     <td>{{ creator.profession }}</td>
-                    <td>${{ creator.value.toFixed(2) }}</td>
+                    <td>₱{{ creator.value.toFixed(2) }}</td>
                   </tr>
                 </tbody>
               </table>
@@ -451,8 +451,9 @@ export default {
       // Load data for the active tab
       switch (this.activeTab) {
         case 'revenue':
-          this.loadRevenueData();
-          this.loadTransactionList();
+          // First load transactions, then load revenue data to prevent overwriting
+          await this.loadTransactionList();
+          await this.loadRevenueData(); // This should run after transactions are loaded
           break;
         case 'users':
           this.loadUserData();
@@ -472,10 +473,20 @@ export default {
     async loadRevenueData() {
       this.loading.revenue = true;
       try {
-        // Get 6 months of data by default
+        // Use a much wider date range to capture all possible transactions
+        // Start from 5 years ago up to 1 year in the future
         const endDate = new Date();
+        endDate.setFullYear(endDate.getFullYear() + 1); // Go 1 year into the future
+        
         const startDate = new Date();
-        startDate.setMonth(startDate.getMonth() - 6);
+        startDate.setFullYear(startDate.getFullYear() - 5); // Go 5 years into the past
+        
+        // Log the date range we're using
+        console.log('Using date range:', {
+          start: startDate.toISOString().split('T')[0],
+          end: endDate.toISOString().split('T')[0],
+          groupBy: this.revenueTimeframe
+        });
         
         const response = await getAdminRevenueAnalytics(
           startDate.toISOString().split('T')[0],
@@ -487,14 +498,73 @@ export default {
         this.updateRevenueChart();
       } catch (error) {
         console.error('Error loading revenue data:', error);
-        // Show error notification
       } finally {
         this.loading.revenue = false;
       }
     },
     
     updateRevenueChart() {
-      if (!this.revenue.revenueTimeline || this.revenue.revenueTimeline.length === 0) return;
+      console.log('Updating revenue chart with data:', this.revenue);
+      
+      if (!this.revenue.revenueTimeline || this.revenue.revenueTimeline.length === 0) {
+        console.warn('No revenue timeline data available for chart');
+        
+        // If we have revenue data but no timeline, create a simple chart with today's date
+        if (this.revenue.totalRevenue > 0) {
+          console.log('Creating simple chart with total revenue');
+          
+          const ctx = this.$refs.revenueChart;
+          if (!ctx) return;
+          
+          // Destroy existing chart if it exists
+          if (this.revenueChart) {
+            this.revenueChart.destroy();
+          }
+          
+          // Create a simple chart with today's date and total revenue
+          const today = new Date().toISOString().split('T')[0];
+          
+          this.revenueChart = new Chart(ctx, {
+            type: 'line',
+            data: {
+              labels: [today],
+              datasets: [{
+                label: 'Revenue (₱)',
+                data: [this.revenue.totalRevenue],
+                backgroundColor: 'rgba(54, 162, 235, 0.2)',
+                borderColor: 'rgba(54, 162, 235, 1)',
+                borderWidth: 2,
+                tension: 0.2
+              }]
+            },
+            options: {
+              responsive: true,
+              maintainAspectRatio: false,
+              scales: {
+                y: {
+                  beginAtZero: true,
+                  ticks: {
+                    callback: function(value) {
+                      return '₱' + value.toFixed(2);
+                    }
+                  }
+                }
+              },
+              plugins: {
+                tooltip: {
+                  callbacks: {
+                    label: function(context) {
+                      return '₱' + context.parsed.y.toFixed(2);
+                    }
+                  }
+                }
+              }
+            }
+          });
+        }
+        
+        return;
+      }
       
       const ctx = this.$refs.revenueChart;
       if (!ctx) return;
@@ -505,14 +575,31 @@ export default {
       }
       
       const labels = this.revenue.revenueTimeline.map(item => item.date);
-      const data = this.revenue.revenueTimeline.map(item => item.revenue / 100); // Convert cents to dollars
+      
+      // Check if the revenue needs to be divided by 100 (cents to dollars)
+      // This handles different API response formats between environments
+      const firstItem = this.revenue.revenueTimeline[0];
+      const useRawValue = firstItem && firstItem.revenue <= 1000; // If revenue is small, assume it's already in dollars
+      
+      console.log('Revenue chart values:', {
+        useRawValue, 
+        firstItemRevenue: firstItem ? firstItem.revenue : 'N/A'
+      });
+      
+      const data = this.revenue.revenueTimeline.map(item => {
+        if (useRawValue) {
+          return item.revenue; // Use raw value (already in dollars)
+        } else {
+          return item.revenue / 100; // Convert from cents to dollars
+        }
+      });
       
       this.revenueChart = new Chart(ctx, {
         type: 'line',
         data: {
           labels: labels,
           datasets: [{
-            label: 'Revenue ($)',
+            label: 'Revenue (₱)',
             data: data,
             backgroundColor: 'rgba(54, 162, 235, 0.2)',
             borderColor: 'rgba(54, 162, 235, 1)',
@@ -528,7 +615,7 @@ export default {
               beginAtZero: true,
               ticks: {
                 callback: function(value) {
-                  return '$' + value.toFixed(2);
+                  return '₱' + value.toFixed(2);
                 }
               }
             }
@@ -537,7 +624,7 @@ export default {
             tooltip: {
               callbacks: {
                 label: function(context) {
-                  return '$' + context.parsed.y.toFixed(2);
+                  return '₱' + context.parsed.y.toFixed(2);
                 }
               }
             }
@@ -745,16 +832,31 @@ export default {
     async loadTransactionList() {
       this.loading.transactions = true;
       try {
+        // Use a much wider date range to capture all possible transactions
+        // Start from 5 years ago up to 1 year in the future
+        const endDate = new Date();
+        endDate.setFullYear(endDate.getFullYear() + 1); // Go 1 year into the future
+        
+        const startDate = new Date();
+        startDate.setFullYear(startDate.getFullYear() - 5); // Go 5 years into the past
+        
+        console.log('Using date range for transactions:', {
+          start: startDate.toISOString().split('T')[0],
+          end: endDate.toISOString().split('T')[0]
+        });
+        
         // Get transactions from revenue analytics with the includeTransactions flag
         const response = await getAdminRevenueAnalytics(
-          null, // start date (default: last 30 days)
-          null, // end date (default: today)
+          startDate.toISOString().split('T')[0],
+          endDate.toISOString().split('T')[0],
           'day',
           true  // includeTransactions = true
         );
         
+        // IMPORTANT: Only update the transactions array, not the entire revenue object
         if (response.transactions) {
           this.transactions = response.transactions;
+          console.log('Loaded transactions:', this.transactions.length);
         } else {
           this.transactions = [];
           console.warn('No transaction data received from the server');
